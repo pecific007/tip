@@ -105,7 +105,7 @@ impl CommandTypes {
             "insert" => Ok(CommandTypes::Insert),
             "delete" => Ok(CommandTypes::Delete),
             "update" => Ok(CommandTypes::Update),
-            _ => Err("Error: invalid function"),
+            _ => Err("Error: invalid command"),
         }
     }
 }
@@ -189,13 +189,23 @@ mod test {
     fn command_type_validation_not_equal_works() {
         let cmd = "create";
         assert!(
-            match CommandTypes::validate_command_type(cmd) {
-                Ok(CommandTypes::Insert) => false,
-                Ok(CommandTypes::Delete) => false,
-                Ok(CommandTypes::Update) => false,
-                _ => true,
-            },
+            !matches!(
+                CommandTypes::validate_command_type(cmd),
+                Ok(CommandTypes::Insert) | Ok(CommandTypes::Delete) | Ok(CommandTypes::Update)
+            ),
             "Validate command types failed!"
         );
+    }
+    #[test]
+    fn perform_function_works() {
+        let args = vec![
+            String::from("tip"),
+            String::from("insert"),
+            String::from("@tip"),
+        ];
+        // Assuming these two will not error out.
+        let cmd_args = CmdArgs::build(&args).unwrap();
+        let tip_cli = TipCli::init(&cmd_args).unwrap();
+        _ = tip_cli.perform();
     }
 }

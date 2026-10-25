@@ -30,5 +30,5 @@ fn main() {
     println!("    function: name {}", cmd_args.function.func_name);
     println!("              args {:?}", cmd_args.function.func_args);
     let tip_cli = TipCli::init(&cmd_args).expect("ERROR HAPPENED");
-    println!("TIP_CLI: {:?}", tip_cli);
+    println!("{:?}", tip_cli);
 }
