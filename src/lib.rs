@@ -91,6 +91,14 @@ pub enum CommandTypes {
 }
 
 impl CommandTypes {
+    pub const fn to_str(&self) -> &'static str {
+        match &self {
+            CommandTypes::Create => "create",
+            CommandTypes::Insert => "insert",
+            CommandTypes::Delete => "delete",
+            CommandTypes::Update => "update",
+        }
+    }
     pub fn validate_command_type(cmd: &str) -> Result<CommandTypes, &'static str> {
         match cmd {
             "create" => Ok(CommandTypes::Create),
@@ -105,13 +113,7 @@ impl CommandTypes {
 // Adding the Display trait
 impl fmt::Display for CommandTypes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            CommandTypes::Create => "create",
-            CommandTypes::Insert => "insert",
-            CommandTypes::Delete => "delete",
-            CommandTypes::Update => "update",
-        };
-        write!(f, "{}", name)
+        f.write_str(self.to_str())
     }
 }
 
@@ -139,5 +141,61 @@ impl TipCli {
             command,
             function,
         })
+    }
+
+    pub fn perform(&self) -> Result<(), &'static str> {
+        unimplemented!();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn function_type_validation_equal_works() {
+        let function = "@project";
+        assert!(
+            match FunctionTypes::validate_function_type(function) {
+                Ok(FunctionTypes::Project) => true,
+                _ => false,
+            },
+            "Validate function types failed!"
+        );
+    }
+    #[test]
+    fn function_type_validation_not_equal_works() {
+        let function = "@tip";
+        assert!(
+            match FunctionTypes::validate_function_type(function) {
+                Ok(FunctionTypes::Project) => false,
+                _ => true,
+            },
+            "Validate function types failed!"
+        );
+    }
+    #[test]
+    fn command_type_validation_equal_works() {
+        let cmd = "insert";
+        assert!(
+            matches!(
+                CommandTypes::validate_command_type(cmd),
+                Ok(CommandTypes::Insert)
+            ),
+            "Validate command types failed!"
+        );
+    }
+    #[test]
+    fn command_type_validation_not_equal_works() {
+        let cmd = "create";
+        assert!(
+            match CommandTypes::validate_command_type(cmd) {
+                Ok(CommandTypes::Insert) => false,
+                Ok(CommandTypes::Delete) => false,
+                Ok(CommandTypes::Update) => false,
+                _ => true,
+            },
+            "Validate command types failed!"
+        );
     }
 }
