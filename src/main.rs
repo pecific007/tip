@@ -1,43 +1,6 @@
-use std::{env, fs, path::Path, process};
+use std::{env, process};
 
-#[derive(Debug)]
-struct Function {
-    func_name: String,
-    func_args: Vec<String>,
-}
-
-struct CmdArgs {
-    project: String,
-    command: String,
-    function: Function,
-}
-
-impl CmdArgs {
-    fn build(args: &[String]) -> Result<CmdArgs, &'static str> {
-        if args.len() < 4 {
-            return Err("Not enough arguments provided");
-        }
-        let project = args[1].clone();
-        let command = args[2].clone();
-        let function = Function {
-            func_name: args[3].clone(),
-            func_args: args[4..].to_vec(),
-        };
-
-        Ok(CmdArgs {
-            project,
-            command,
-            function,
-        })
-    }
-}
-
-// struct Tip {
-//     home_dir: String,
-//     project_dir: String,
-//     command: String,
-//     function: Function,
-// }
+use tip::{CmdArgs, TipCli};
 
 fn usage() {
     eprintln!("Usage: tip <project> [command] (function)");
@@ -53,31 +16,19 @@ fn usage() {
     eprintln!("           @tip            add a new tip!");
 }
 
-fn find_tip_dir() {
-    let home_dir = env::var("HOME").unwrap_or_else(|err| {
-        eprintln!("Error: could not find the home directory: {err}");
-        process::exit(1);
-    });
-    let tip_dir = format!("{home_dir}/.tip");
-
-    if !Path::new(tip_dir.as_str()).is_dir() {
-        fs::create_dir(tip_dir).expect("Directory couldn't be created");
-    }
-}
-
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let config = CmdArgs::build(&args).unwrap_or_else(|err| {
-        eprintln!("Error parsing arguments: {err}");
+    let cmd_args = CmdArgs::build(&args).unwrap_or_else(|err| {
+        eprintln!("Error parsing arguments: {err}\n");
         usage();
         process::exit(1);
     });
     println!("so far so good.");
     println!("CmdArgs:");
-    println!("    project: {}", config.project);
-    println!("    command: {}", config.command);
-    println!("    function: name {}", config.function.func_name);
-    println!("              args {:?}", config.function.func_args);
-
-    find_tip_dir();
+    println!("    project: {}", cmd_args.project);
+    println!("    command: {}", cmd_args.command.command_str);
+    println!("    function: name {}", cmd_args.function.func_name);
+    println!("              args {:?}", cmd_args.function.func_args);
+    let tip_cli = TipCli::init(&cmd_args).expect("ERROR HAPPENED");
+    println!("TIP_CLI: {:?}", tip_cli);
 }
