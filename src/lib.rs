@@ -1,8 +1,42 @@
 use std::{env, fmt, fs, path::Path};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FunctionTypes {
+    Project,
+    Tip,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CommandTypes {
+    Create,
+    Insert,
+    Delete,
+    Update,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Function {
+    pub func_type: FunctionTypes,
+    pub func_name: String,
+    pub func_args: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Command {
+    pub command_type: CommandTypes,
+    pub command_str: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct CmdArgs {
     pub project: String,
+    pub command: Command,
+    pub function: Function,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TipCli {
+    pub tip_dir: String,
     pub command: Command,
     pub function: Function,
 }
@@ -33,32 +67,6 @@ impl CmdArgs {
     }
 }
 
-#[derive(Debug)]
-pub struct Function {
-    pub func_type: FunctionTypes,
-    pub func_name: String,
-    pub func_args: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct Command {
-    pub command_type: CommandTypes,
-    pub command_str: String,
-}
-
-#[derive(Debug)]
-pub struct TipCli {
-    pub tip_dir: String,
-    pub command: Command,
-    pub function: Function,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum FunctionTypes {
-    Project,
-    Tip,
-}
-
 impl FunctionTypes {
     pub const fn to_str(&self) -> &'static str {
         match &self {
@@ -80,14 +88,6 @@ impl fmt::Display for FunctionTypes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.to_str())
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum CommandTypes {
-    Create,
-    Insert,
-    Delete,
-    Update,
 }
 
 impl CommandTypes {
@@ -126,16 +126,8 @@ impl TipCli {
         if !Path::new(tip_dir.as_str()).is_dir() {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
         }
-
-        let command = Command {
-            command_type: cmd_args.command.command_type,
-            command_str: cmd_args.command.command_str.clone(),
-        };
-        let function = Function {
-            func_type: cmd_args.function.func_type,
-            func_name: cmd_args.function.func_name.clone(),
-            func_args: cmd_args.function.func_args.clone(),
-        };
+        let command = cmd_args.command.clone();
+        let function = cmd_args.function.clone();
         Ok(TipCli {
             tip_dir,
             command,
@@ -155,34 +147,28 @@ mod test {
     #[test]
     fn function_type_validation_equal_works() {
         let function = "@project";
-        assert!(
-            match FunctionTypes::validate_function_type(function) {
-                Ok(FunctionTypes::Project) => true,
-                _ => false,
-            },
-            "Validate function types failed!"
+        assert_eq!(
+            FunctionTypes::validate_function_type(function),
+            Ok(FunctionTypes::Project),
+            "Validate function types failed!",
         );
     }
     #[test]
     fn function_type_validation_not_equal_works() {
         let function = "@tip";
-        assert!(
-            match FunctionTypes::validate_function_type(function) {
-                Ok(FunctionTypes::Project) => false,
-                _ => true,
-            },
-            "Validate function types failed!"
+        assert_ne!(
+            FunctionTypes::validate_function_type(function),
+            Ok(FunctionTypes::Project),
+            "Validate function types failed!",
         );
     }
     #[test]
     fn command_type_validation_equal_works() {
         let cmd = "insert";
-        assert!(
-            matches!(
-                CommandTypes::validate_command_type(cmd),
-                Ok(CommandTypes::Insert)
-            ),
-            "Validate command types failed!"
+        assert_eq!(
+            CommandTypes::validate_command_type(cmd),
+            Ok(CommandTypes::Insert),
+            "Validate command types failed!",
         );
     }
     #[test]
@@ -207,5 +193,6 @@ mod test {
         let cmd_args = CmdArgs::build(&args).unwrap();
         let tip_cli = TipCli::init(&cmd_args).unwrap();
         _ = tip_cli.perform();
+        unreachable!();
     }
 }
