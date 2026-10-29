@@ -9,7 +9,7 @@ fn usage() {
     eprintln!("    -- commands:");
     eprintln!("           create          to creae a new project");
     eprintln!("           insert          to add a new tip");
-    eprintln!("           delete          to delete a new tip");
+    eprintln!("           delete          to delete a tip");
     eprintln!("           drop            to drop a project");
     eprintln!("    -- functions:");
     eprintln!("           @project        specify the name of the new project");
@@ -31,4 +31,5 @@ fn main() {
     println!("              args {:?}", cmd_args.function.func_args);
     let tip_cli = TipCli::init(&cmd_args).expect("ERROR HAPPENED");
     println!("{:?}", tip_cli);
+    _ = tip_cli.perform().expect("perform doesn't work");
 }
