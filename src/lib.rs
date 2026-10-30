@@ -37,6 +37,7 @@ pub struct CmdArgs {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TipCli {
     pub tip_dir: String,
+    pub project_name: String,
     pub command: Command,
     pub function: Function,
 }
@@ -140,10 +141,12 @@ impl TipCli {
         if !Path::new(tip_dir.as_str()).is_dir() {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
         }
+        let project_name = cmd_args.project.clone();
         let command = cmd_args.command.clone();
         let function = cmd_args.function.clone();
         Ok(TipCli {
             tip_dir,
+            project_name,
             command,
             function,
         })
@@ -152,8 +155,8 @@ impl TipCli {
     pub fn perform(&self) -> Result<Cursor, &'static str> {
         match self.command.command_type {
             CommandTypes::Create => {
-                if self.function.func_args.len() > 1 {
-                    return Err("Invalid number of arguments provided: expected 1");
+                if !self.function.func_args.is_empty() {
+                    return Err("Invalid number of arguments provided: expected 0");
                 }
                 assert_eq!(self.function.func_type.to_str(), "@project");
                 self.create_new_project()
@@ -165,14 +168,14 @@ impl TipCli {
     }
 
     fn create_new_project(&self) -> Result<Cursor, &'static str> {
-        let new_project_dir_name = format!("{}/{}", self.tip_dir, self.function.func_args[0]);
+        let new_project_dir_name = format!("{}/{}", self.tip_dir, self.project_name);
         fs::create_dir(&new_project_dir_name)
             .map_err(|_| "Error: couldn't create new project directory.")?;
         let currdir =
             env::current_dir().map_err(|_| "Error: couldn't get the current directory")?;
         let meta_data = format!(
             "@project({})\n@path({})\n@count(1)",
-            self.function.func_args[0],
+            self.project_name,
             currdir.display()
         );
         let mut meta_file = fs::File::create(format!("{}/000.tip", new_project_dir_name))
@@ -234,7 +237,6 @@ mod test {
             String::from("tip"),
             String::from("create"),
             String::from("@project"),
-            String::from("imgv"),
         ];
         // Assuming these two will not error out.
         fs::create_dir("temp").expect("temp dir not created");
