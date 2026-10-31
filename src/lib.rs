@@ -28,14 +28,6 @@ pub struct Command {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CmdArgs {
-    pub project: String,
-    pub command: String,
-    pub function: String,
-    pub args: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct TipCli {
     pub tip_dir: String,
     pub project_name: String,
@@ -54,20 +46,6 @@ pub struct Tips {
 pub struct Cursor {
     pub list: Option<Vec<Tips>>,
     pub ok: Result<bool, &'static str>,
-}
-
-impl CmdArgs {
-    pub fn build(args: &[String]) -> Result<CmdArgs, String> {
-        if args.len() < 4 {
-            return Err("Not enough arguments provided".to_string());
-        }
-        Ok(CmdArgs {
-            project: args[1].clone(),
-            command: args[2].clone(),
-            function: args[3].clone(),
-            args: args[4..].to_vec(),
-        })
-    }
 }
 
 impl FunctionTypes {
@@ -109,6 +87,7 @@ impl Function {
                     func_type: fn_type,
                 })
             }
+            FunctionTypes::Tip => unimplemented!(),
             _ => Err("Not implimented".to_string()),
         }
     }
@@ -152,7 +131,7 @@ impl Command {
 }
 
 impl TipCli {
-    pub fn init(cmd_args: &CmdArgs) -> Result<TipCli, String> {
+    pub fn init(cmd_args: &[String]) -> Result<TipCli, String> {
         eprintln!("Initializing TipCli");
         let home_dir =
             env::var("HOME").map_err(|_| "Error: could not find the home directory: {err}")?;
@@ -160,9 +139,9 @@ impl TipCli {
         if !Path::new(tip_dir.as_str()).is_dir() {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
         }
-        let project_name = cmd_args.project.clone();
-        let function = Function::new(cmd_args.function.as_str(), cmd_args.args.clone())?;
-        let command = Command::new(cmd_args.command.as_str(), function)?;
+        let project_name = cmd_args[1].clone();
+        let function = Function::new(cmd_args[3].as_str(), cmd_args[4..].to_vec())?;
+        let command = Command::new(cmd_args[2].as_str(), function)?;
         Ok(TipCli {
             tip_dir,
             project_name,
@@ -283,8 +262,7 @@ mod test {
         ];
         // Assuming these will not error out.
         fs::create_dir("temp").expect("temp dir not created");
-        let cmd_args = CmdArgs::build(&args).expect("build failed");
-        let mut tip_cli = TipCli::init(&cmd_args).expect("init failed");
+        let mut tip_cli = TipCli::init(&args).expect("init failed");
         tip_cli.tip_dir = "./temp".to_string();
         let cursor_cmp = Cursor {
             list: None,

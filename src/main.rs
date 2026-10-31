@@ -1,5 +1,5 @@
 use std::{env, process};
-use tip::{CmdArgs, TipCli};
+use tip::TipCli;
 
 fn usage() {
     eprintln!("Usage: tip <project> [command] (function)");
@@ -19,24 +19,32 @@ fn usage() {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let cmd_args = CmdArgs::build(&args).unwrap_or_else(|err| {
-        eprintln!("Error parsing arguments: {err}\n");
+    if args[1..].to_vec().contains(&"help".to_string()) {
+        if args.len() > 3 {
+            eprintln!("Make sure to quote the arguments like title");
+        }
+        usage();
+        process::exit(0);
+    }
+    if args.len() < 4 {
+        eprintln!("Error: Not enough arguments provided");
         usage();
         process::exit(1);
-    });
+    }
     println!("so far so good.");
     println!("CmdArgs:");
-    println!("    project: {}", cmd_args.project);
-    println!("    command: {}", cmd_args.command);
-    println!("    function: name {}", cmd_args.function);
-    println!("              args {:?}", cmd_args.args);
-    let tip_cli = TipCli::init(&cmd_args).unwrap_or_else(|e| {
+    println!("    project: {}", args[1]);
+    println!("    command: {}", args[2]);
+    println!("    function: name {}", args[3]);
+    println!("              args {:?}", args[4..].to_vec());
+    let tip_cli = TipCli::init(&args).unwrap_or_else(|e| {
         eprintln!("Error: TipCli::init failed: {e}");
         process::exit(1);
     });
     println!("{:?}", tip_cli);
     _ = tip_cli.perform().unwrap_or_else(|e| {
         eprintln!("Error: TipCli::perform failed: {e}");
+        usage();
         process::exit(1);
     });
 }
