@@ -75,7 +75,7 @@ impl fmt::Display for FunctionTypes {
 
 impl Function {
     pub fn new(func: &str, args: Vec<String>) -> Result<Function, String> {
-        let fn_type = FunctionTypes::new(func).expect("Function type validation failed");
+        let fn_type = FunctionTypes::new(func)?;
         match fn_type {
             FunctionTypes::Project => {
                 // the @project function accepts 0 arguments
@@ -251,6 +251,26 @@ mod test {
             command_func: _func_cmp,
         };
         assert_eq!(cmd_res, Ok(cmd_cmp));
+    }
+    #[test]
+    fn tip_init_works() {
+        let args = vec![
+            String::from("current_project"),
+            String::from("tip"),
+            String::from("create"),
+            String::from("@project"),
+        ];
+        let tip_cli = TipCli::init(&args).expect("init failed");
+        let func = Function::new("@project", vec![]).expect("function new failed");
+        let command = Command::new("create", func.clone()).expect("command new failed");
+        let tip_dir = "/home/prashant/.tip".to_string();
+        let project_name = args[1].clone();
+        let tip_cmp = TipCli {
+            tip_dir,
+            project_name,
+            command,
+        };
+        assert_eq!(tip_cli, tip_cmp);
     }
     #[test]
     fn perform_function_works() {
