@@ -4,34 +4,35 @@ use std::{env, fmt, fs, io::prelude::Write, path::Path};
 pub enum FunctionTypes {
     Project,
     Tip,
+    Where,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CommandTypes {
     Create,
-    Insert,
     Delete,
     Update,
+    Show,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub func_type: FunctionTypes,
-    pub func_name: String,
     pub func_args: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Command {
     pub command_type: CommandTypes,
-    pub command_str: String,
+    pub command_func: Function,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CmdArgs {
     pub project: String,
-    pub command: Command,
-    pub function: Function,
+    pub command: String,
+    pub function: String,
+    pub args: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,7 +40,6 @@ pub struct TipCli {
     pub tip_dir: String,
     pub project_name: String,
     pub command: Command,
-    pub function: Function,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,27 +57,15 @@ pub struct Cursor {
 }
 
 impl CmdArgs {
-    pub fn build(args: &[String]) -> Result<CmdArgs, &'static str> {
+    pub fn build(args: &[String]) -> Result<CmdArgs, String> {
         if args.len() < 4 {
-            return Err("Not enough arguments provided");
+            return Err("Not enough arguments provided".to_string());
         }
-        let project = args[1].clone();
-        let cmd_type = CommandTypes::validate_command_type(&args[2])?;
-        let command = Command {
-            command_type: cmd_type,
-            command_str: args[2].clone(),
-        };
-        let function_type = FunctionTypes::validate_function_type(&args[3])?;
-        let function = Function {
-            func_type: function_type,
-            func_name: args[3].clone(),
-            func_args: args[4..].to_vec(),
-        };
-
         Ok(CmdArgs {
-            project,
-            command,
-            function,
+            project: args[1].clone(),
+            command: args[2].clone(),
+            function: args[3].clone(),
+            args: args[4..].to_vec(),
         })
     }
 }
@@ -87,13 +75,15 @@ impl FunctionTypes {
         match &self {
             FunctionTypes::Project => "@project",
             FunctionTypes::Tip => "@tip",
+            FunctionTypes::Where => "@where",
         }
     }
-    pub fn validate_function_type(function: &str) -> Result<FunctionTypes, &'static str> {
+    pub fn new(function: &str) -> Result<FunctionTypes, String> {
         match function {
             "@project" => Ok(FunctionTypes::Project),
             "@tip" => Ok(FunctionTypes::Tip),
-            _ => Err("Error: invalid function"),
+            "@where" => Ok(FunctionTypes::Where),
+            _ => Err("Error: invalid function".to_string()),
         }
     }
 }
@@ -105,22 +95,41 @@ impl fmt::Display for FunctionTypes {
     }
 }
 
+impl Function {
+    pub fn new(func: &str, args: Vec<String>) -> Result<Function, String> {
+        let fn_type = FunctionTypes::new(func).expect("Function type validation failed");
+        match fn_type {
+            FunctionTypes::Project => {
+                // the @project function accepts 0 arguments
+                if !args.is_empty() {
+                    return Err("Wrong number of arguments provided: expected none.".to_string());
+                }
+                Ok(Function {
+                    func_args: args.clone(),
+                    func_type: fn_type,
+                })
+            }
+            _ => Err("Not implimented".to_string()),
+        }
+    }
+}
+
 impl CommandTypes {
     pub const fn to_str(&self) -> &'static str {
         match &self {
             CommandTypes::Create => "create",
-            CommandTypes::Insert => "insert",
             CommandTypes::Delete => "delete",
             CommandTypes::Update => "update",
+            CommandTypes::Show => "show",
         }
     }
-    pub fn validate_command_type(cmd: &str) -> Result<CommandTypes, &'static str> {
+    pub fn new(cmd: &str) -> Result<CommandTypes, String> {
         match cmd {
             "create" => Ok(CommandTypes::Create),
-            "insert" => Ok(CommandTypes::Insert),
             "delete" => Ok(CommandTypes::Delete),
             "update" => Ok(CommandTypes::Update),
-            _ => Err("Error: invalid command"),
+            "show" => Ok(CommandTypes::Show),
+            _ => Err("Error: invalid command".to_string()),
         }
     }
 }
@@ -132,8 +141,18 @@ impl fmt::Display for CommandTypes {
     }
 }
 
+impl Command {
+    pub fn new(cmd_str: &str, cmd_func: Function) -> Result<Command, String> {
+        let cmd_type = CommandTypes::new(cmd_str)?;
+        Ok(Command {
+            command_type: cmd_type,
+            command_func: cmd_func.clone(),
+        })
+    }
+}
+
 impl TipCli {
-    pub fn init(cmd_args: &CmdArgs) -> Result<TipCli, &'static str> {
+    pub fn init(cmd_args: &CmdArgs) -> Result<TipCli, String> {
         eprintln!("Initializing TipCli");
         let home_dir =
             env::var("HOME").map_err(|_| "Error: could not find the home directory: {err}")?;
@@ -142,47 +161,49 @@ impl TipCli {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
         }
         let project_name = cmd_args.project.clone();
-        let command = cmd_args.command.clone();
-        let function = cmd_args.function.clone();
+        let function = Function::new(cmd_args.function.as_str(), cmd_args.args.clone())?;
+        let command = Command::new(cmd_args.command.as_str(), function)?;
         Ok(TipCli {
             tip_dir,
             project_name,
             command,
-            function,
         })
     }
 
-    pub fn perform(&self) -> Result<Cursor, &'static str> {
+    pub fn perform(&self) -> Result<Cursor, String> {
         match self.command.command_type {
-            CommandTypes::Create => {
-                if !self.function.func_args.is_empty() {
-                    return Err("Invalid number of arguments provided: expected 0");
+            CommandTypes::Create => match self.command.command_func.func_type {
+                FunctionTypes::Project => {
+                    assert_eq!(self.command.command_func.func_type.to_str(), "@project");
+                    self.create_new_project()
                 }
-                assert_eq!(self.function.func_type.to_str(), "@project");
-                self.create_new_project()
-            }
+                other => Err(format!(
+                    "Error: invalid function for this command: {}",
+                    other.to_str()
+                )),
+            },
             _ => {
                 unimplemented!();
             }
         }
     }
 
-    fn create_new_project(&self) -> Result<Cursor, &'static str> {
+    fn create_new_project(&self) -> Result<Cursor, String> {
         let new_project_dir_name = format!("{}/{}", self.tip_dir, self.project_name);
         fs::create_dir(&new_project_dir_name)
             .map_err(|_| "Error: couldn't create new project directory.")?;
         let currdir =
             env::current_dir().map_err(|_| "Error: couldn't get the current directory")?;
         let meta_data = format!(
-            "@project({})\n@path({})\n@count(1)",
+            "@project({})\n@path({})\n@count(1)\n",
             self.project_name,
             currdir.display()
         );
         let mut meta_file = fs::File::create(format!("{}/000.tip", new_project_dir_name))
-            .expect("Couldn't create metadata file"); // expect is temporary
+            .map_err(|_| "Error: couldn't create metadata file")?;
         meta_file
             .write_all(meta_data.clone().as_bytes())
-            .map_err(|_| "Couldn't write to metadata file")?;
+            .map_err(|_| "Error: couldn't write to metadata file")?;
         Ok(Cursor {
             list: None,
             ok: Ok(true),
@@ -198,7 +219,7 @@ mod test {
     fn function_type_validation_equal_works() {
         let function = "@project";
         assert_eq!(
-            FunctionTypes::validate_function_type(function),
+            FunctionTypes::new(function),
             Ok(FunctionTypes::Project),
             "Validate function types failed!",
         );
@@ -207,28 +228,50 @@ mod test {
     fn function_type_validation_not_equal_works() {
         let function = "@tip";
         assert_ne!(
-            FunctionTypes::validate_function_type(function),
+            FunctionTypes::new(function),
             Ok(FunctionTypes::Project),
             "Validate function types failed!",
         );
     }
     #[test]
     fn command_type_validation_equal_works() {
-        let cmd = "insert";
+        let cmd = "delete";
         assert_eq!(
-            CommandTypes::validate_command_type(cmd),
-            Ok(CommandTypes::Insert),
+            CommandTypes::new(cmd),
+            Ok(CommandTypes::Delete),
             "Validate command types failed!",
         );
     }
     #[test]
     fn command_type_validation_not_equal_works() {
-        let cmd = "create";
-        assert_eq!(
-            CommandTypes::validate_command_type(cmd),
+        let cmd = "delete";
+        assert_ne!(
+            CommandTypes::new(cmd),
             Ok(CommandTypes::Create),
             "Validate command types failed!"
         );
+    }
+    #[test]
+    fn function_validation_equal_works() {
+        let func_res = Function::new("@project", vec![]);
+        let func_cmp = Function {
+            func_type: FunctionTypes::Project,
+            func_args: vec![],
+        };
+        assert_eq!(func_res, Ok(func_cmp));
+    }
+    #[test]
+    fn command_validation_equal_works() {
+        let _func_cmp = Function {
+            func_type: FunctionTypes::Project,
+            func_args: vec![],
+        };
+        let cmd_res = Command::new("create", _func_cmp.clone());
+        let cmd_cmp = Command {
+            command_type: CommandTypes::Create,
+            command_func: _func_cmp,
+        };
+        assert_eq!(cmd_res, Ok(cmd_cmp));
     }
     #[test]
     fn perform_function_works() {
@@ -238,7 +281,7 @@ mod test {
             String::from("create"),
             String::from("@project"),
         ];
-        // Assuming these two will not error out.
+        // Assuming these will not error out.
         fs::create_dir("temp").expect("temp dir not created");
         let cmd_args = CmdArgs::build(&args).expect("build failed");
         let mut tip_cli = TipCli::init(&cmd_args).expect("init failed");

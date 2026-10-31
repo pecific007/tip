@@ -1,19 +1,20 @@
 use std::{env, process};
-
 use tip::{CmdArgs, TipCli};
 
 fn usage() {
     eprintln!("Usage: tip <project> [command] (function)");
     eprintln!("    -- project:");
-    eprintln!("           project-name    The name of the project");
+    eprintln!("          <project>        The name of the project");
     eprintln!("    -- commands:");
-    eprintln!("           create          to creae a new project");
-    eprintln!("           insert          to add a new tip");
-    eprintln!("           delete          to delete a tip");
-    eprintln!("           drop            to drop a project");
+    eprintln!("           create          to create project|tip"); // sort of implimented
+    eprintln!("           update          to update project|tip"); // not implimented
+    eprintln!("           delete          to delete project|tip"); // not implimented
+    eprintln!("           show            to show   project|tip"); // not implimented
     eprintln!("    -- functions:");
-    eprintln!("           @project        specify the name of the new project");
-    eprintln!("           @tip            add a new tip!");
+    eprintln!("           @project        create new project"); // sort of implimented
+    eprintln!("           @tip            create new tip"); // not implimented
+    eprintln!("           @where          specify a condition"); // not implimented
+    eprintln!("use `help command|function <name>` to learn more about them."); // not implimented
 }
 
 fn main() {
@@ -26,10 +27,16 @@ fn main() {
     println!("so far so good.");
     println!("CmdArgs:");
     println!("    project: {}", cmd_args.project);
-    println!("    command: {}", cmd_args.command.command_str);
-    println!("    function: name {}", cmd_args.function.func_name);
-    println!("              args {:?}", cmd_args.function.func_args);
-    let tip_cli = TipCli::init(&cmd_args).expect("ERROR HAPPENED");
+    println!("    command: {}", cmd_args.command);
+    println!("    function: name {}", cmd_args.function);
+    println!("              args {:?}", cmd_args.args);
+    let tip_cli = TipCli::init(&cmd_args).unwrap_or_else(|e| {
+        eprintln!("Error: TipCli::init failed: {e}");
+        process::exit(1);
+    });
     println!("{:?}", tip_cli);
-    _ = tip_cli.perform().expect("perform doesn't work");
+    _ = tip_cli.perform().unwrap_or_else(|e| {
+        eprintln!("Error: TipCli::perform failed: {e}");
+        process::exit(1);
+    });
 }
