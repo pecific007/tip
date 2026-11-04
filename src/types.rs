@@ -1,0 +1,49 @@
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FunctionTypes {
+    Project,
+    Tip,
+    Where,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CommandTypes {
+    Create,
+    Delete,
+    Update,
+    Show,
+}
+
+pub struct ParseFile;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Function {
+    pub func_type: FunctionTypes,
+    pub func_args: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Command {
+    pub command_type: CommandTypes,
+    pub command_func: Function,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TipMeta {
+    pub project: String,
+    pub path: String,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tips {
+    pub id: u32,
+    pub title: String,
+    pub critical: u8,
+    pub done: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cursor {
+    pub list: Option<Vec<Tips>>,
+    pub ok: Result<(), &'static str>,
+}
