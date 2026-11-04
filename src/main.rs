@@ -12,7 +12,7 @@ fn usage() {
     eprintln!("           show            to show   project|tip"); // not implimented
     eprintln!("    -- functions:");
     eprintln!("           @project        create new project"); // sort of implimented
-    eprintln!("           @tip            create new tip"); // not implimented
+    eprintln!("           @tip            create new tip"); // sort of implimented
     eprintln!("           @where          specify a condition"); // not implimented
     eprintln!("use `help command|function <name>` to learn more about them."); // not implimented
 }

@@ -1,4 +1,5 @@
-use std::{env, fmt, fs, io::prelude::Write, path::Path};
+// TODO: separate it into different crates/modules
+use std::{env, fmt, fs, io::prelude::*, path::Path};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FunctionTypes {
@@ -13,6 +14,12 @@ pub enum CommandTypes {
     Delete,
     Update,
     Show,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ParseFile {
+    Metadata,
+    TipFile,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,6 +42,13 @@ pub struct TipCli {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TipMeta {
+    pub project: String,
+    pub path: String,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Tips {
     pub id: u32,
     pub title: String,
@@ -45,7 +59,7 @@ pub struct Tips {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cursor {
     pub list: Option<Vec<Tips>>,
-    pub ok: Result<bool, &'static str>,
+    pub ok: Result<(), &'static str>,
 }
 
 impl FunctionTypes {
@@ -87,7 +101,15 @@ impl Function {
                     func_type: fn_type,
                 })
             }
-            FunctionTypes::Tip => unimplemented!(),
+            FunctionTypes::Tip => {
+                if args.len() != 2 {
+                    return Err("Wrong number of arguments provided: expected 2".to_string());
+                }
+                Ok(Function {
+                    func_args: args.clone(),
+                    func_type: fn_type,
+                })
+            }
             _ => Err("Not implimented".to_string()),
         }
     }
@@ -121,18 +143,22 @@ impl fmt::Display for CommandTypes {
 }
 
 impl Command {
-    pub fn new(cmd_str: &str, cmd_func: Function) -> Result<Command, String> {
+    pub fn new(
+        cmd_str: &str,
+        cmd_func_name: &str,
+        cmd_func_args: Vec<String>,
+    ) -> Result<Command, String> {
+        let function = Function::new(cmd_func_name, cmd_func_args)?;
         let cmd_type = CommandTypes::new(cmd_str)?;
         Ok(Command {
             command_type: cmd_type,
-            command_func: cmd_func.clone(),
+            command_func: function,
         })
     }
 }
 
 impl TipCli {
     pub fn init(cmd_args: &[String]) -> Result<TipCli, String> {
-        eprintln!("Initializing TipCli");
         let home_dir =
             env::var("HOME").map_err(|_| "Error: could not find the home directory: {err}")?;
         let tip_dir = format!("{home_dir}/.tip");
@@ -140,8 +166,11 @@ impl TipCli {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
         }
         let project_name = cmd_args[1].clone();
-        let function = Function::new(cmd_args[3].as_str(), cmd_args[4..].to_vec())?;
-        let command = Command::new(cmd_args[2].as_str(), function)?;
+        let command = Command::new(
+            cmd_args[2].as_str(),
+            cmd_args[3].as_str(),
+            cmd_args[4..].to_vec(),
+        )?;
         Ok(TipCli {
             tip_dir,
             project_name,
@@ -156,6 +185,10 @@ impl TipCli {
                     assert_eq!(self.command.command_func.func_type.to_str(), "@project");
                     self.create_new_project()
                 }
+                FunctionTypes::Tip => {
+                    assert_eq!(self.command.command_func.func_type.to_str(), "@tip");
+                    self.create_new_tip()
+                }
                 other => Err(format!(
                     "Error: invalid function for this command: {}",
                     other.to_str()
@@ -169,25 +202,118 @@ impl TipCli {
 
     fn create_new_project(&self) -> Result<Cursor, String> {
         let new_project_dir_name = format!("{}/{}", self.tip_dir, self.project_name);
-        fs::create_dir(&new_project_dir_name)
-            .map_err(|_| "Error: couldn't create new project directory.")?;
-        let currdir =
-            env::current_dir().map_err(|_| "Error: couldn't get the current directory")?;
+        if let Ok(f) = fs::create_dir(&new_project_dir_name) {
+            f
+        };
+        let currdir = env::current_dir()
+            .map_err(|e| format!("Error: couldn't get the current directory: {e}"))?;
         let meta_data = format!(
             "@project({})\n@path({})\n@count(1)\n",
             self.project_name,
             currdir.display()
         );
         let mut meta_file = fs::File::create(format!("{}/000.tip", new_project_dir_name))
-            .map_err(|_| "Error: couldn't create metadata file")?;
+            .map_err(|e| format!("Error: couldn't create metadata file: {e}"))?;
         meta_file
             .write_all(meta_data.clone().as_bytes())
-            .map_err(|_| "Error: couldn't write to metadata file")?;
+            .map_err(|e| format!("Error: couldn't write to metadata file: {e}"))?;
         Ok(Cursor {
             list: None,
-            ok: Ok(true),
+            ok: Ok(()),
         })
     }
+
+    fn create_new_tip(&self) -> Result<Cursor, String> {
+        let meta_file =
+            fs::read_to_string(format!("{}/{}/000.tip", self.tip_dir, self.project_name).as_str())
+                .map_err(|e| format!("Error opening metadaa file: {e}"))?;
+        let mut meta_parsed = parse_meta_file(&meta_file)?;
+        let new_tip_file_path = format!(
+            "{}/{}/{:03}.tip",
+            self.tip_dir, self.project_name, meta_parsed.count
+        );
+        let mut new_tip_file =
+            fs::File::create(new_tip_file_path).map_err(|_| "Error: couldn't create tip file")?;
+        let func_args = self.command.command_func.func_args.clone();
+        let new_file_content = format!(
+            "@title({})\n@critical({})\n@done({})\n",
+            func_args[1], func_args[0], false
+        );
+        new_tip_file
+            .write_all(new_file_content.as_bytes())
+            .map_err(|e| format!("Couldn't write to new tip file: {e}"))?;
+        meta_parsed.update_meta_for_new_tip(self)?;
+        Ok(Cursor {
+            list: None,
+            ok: Ok(()),
+        })
+    }
+}
+
+impl TipMeta {
+    pub fn update_meta_for_new_tip(&mut self, tip_cli: &TipCli) -> Result<(), String> {
+        let path = format!("{}/{}/000.tip", tip_cli.tip_dir, tip_cli.project_name);
+        let path_tmp = format!("{path}.tmp");
+        self.count += 1;
+        let meta_data = format!(
+            "@project({})\n@path({})\n@count({})\n",
+            self.project, self.path, self.count,
+        );
+        fs::write(&path_tmp, &meta_data)
+            .map_err(|e| format!("Error: couldn't open tip meta file: {e}"))?;
+        fs::rename(&path_tmp, &path)
+            .map_err(|e| format!("Error: couldn't open tip meta file: {e}"))?;
+        Ok(())
+    }
+}
+
+fn store_data(var: &mut String, line: &str) {
+    let mut buffer = String::new();
+    let mut in_paren = false;
+
+    for ch in line.chars() {
+        match ch {
+            '(' => {
+                in_paren = true;
+                buffer.clear();
+            }
+            ')' if in_paren => {
+                *var = std::mem::take(&mut buffer);
+                in_paren = false;
+            }
+            c if in_paren => buffer.push(c),
+            _ => {}
+        }
+    }
+}
+
+fn parse_meta_file(content: &str) -> Result<TipMeta, String> {
+    let mut project_name: String = String::new();
+    let mut project_path: String = String::new();
+    let mut project_count: String = String::new();
+    for line in content.lines() {
+        if line.starts_with("@project") {
+            store_data(&mut project_name, line);
+        } else if line.starts_with("@path") {
+            store_data(&mut project_path, line);
+        } else if line.starts_with("@count") {
+            store_data(&mut project_count, line);
+        }
+    }
+    if project_name.is_empty() || project_path.is_empty() || project_count.is_empty() {
+        return Err(String::from(
+            "Error: not enough information in the metadata file.",
+        ));
+    }
+    let id_count = project_count
+        .trim()
+        .parse()
+        .map_err(|e| format!("Error: {e}"))?;
+    Ok(TipMeta {
+        project: project_name.clone(),
+        path: project_path.clone(),
+        count: id_count,
+    })
 }
 
 #[cfg(test)]
@@ -241,11 +367,9 @@ mod test {
     }
     #[test]
     fn command_validation_equal_works() {
-        let _func_cmp = Function {
-            func_type: FunctionTypes::Project,
-            func_args: vec![],
-        };
-        let cmd_res = Command::new("create", _func_cmp.clone());
+        let _func_cmp = Function::new("@project", vec![])
+            .expect("failed to create a function to make the command");
+        let cmd_res = Command::new("create", "@project", vec![]);
         let cmd_cmp = Command {
             command_type: CommandTypes::Create,
             command_func: _func_cmp,
@@ -261,8 +385,7 @@ mod test {
             String::from("@project"),
         ];
         let tip_cli = TipCli::init(&args).expect("init failed");
-        let func = Function::new("@project", vec![]).expect("function new failed");
-        let command = Command::new("create", func.clone()).expect("command new failed");
+        let command = Command::new("create", "@project", vec![]).expect("command new failed");
         let tip_dir = "/home/prashant/.tip".to_string();
         let project_name = args[1].clone();
         let tip_cmp = TipCli {
@@ -273,7 +396,7 @@ mod test {
         assert_eq!(tip_cli, tip_cmp);
     }
     #[test]
-    fn perform_function_works() {
+    fn perform_function_create_works() {
         let args = vec![
             String::from("current_project"),
             String::from("tip"),
@@ -286,7 +409,49 @@ mod test {
         tip_cli.tip_dir = "./temp".to_string();
         let cursor_cmp = Cursor {
             list: None,
-            ok: Ok(true),
+            ok: Ok(()),
+        };
+        let cursor_res = tip_cli.perform().expect("perform failed");
+        assert_eq!(cursor_res, cursor_cmp);
+        fs::remove_dir_all(tip_cli.tip_dir)
+            .map_err(|e| format!("couldn't remove directory: {e}"))
+            .unwrap();
+    }
+    #[test]
+    fn perform_function_tip_works() {
+        // Assuming these will not error out.
+        match fs::create_dir("temp2") {
+            Ok(res) => res,
+            Err(error) => match error.kind() {
+                std::io::ErrorKind::AlreadyExists => {}
+                _ => {
+                    panic!("Error: {error:?}")
+                }
+            },
+        }
+        let cmd_setup = Command::new("create", "@project", vec![]).expect("setup: failed cmd new");
+        let tip_cli_setup = TipCli {
+            tip_dir: "./temp2".to_string(),
+            project_name: String::from("imgv"),
+            command: cmd_setup,
+        };
+        tip_cli_setup
+            .perform()
+            .expect("setup: perform(imgv create @project) failed");
+        let cmd = Command::new(
+            "create",
+            "@tip",
+            vec!["4".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: tip_cli_setup.tip_dir.clone(),
+            project_name: String::from("imgv"),
+            command: cmd,
+        };
+        let cursor_cmp = Cursor {
+            list: None,
+            ok: Ok(()),
         };
         let cursor_res = tip_cli.perform().expect("perform failed");
         assert_eq!(cursor_res, cursor_cmp);
