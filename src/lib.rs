@@ -358,23 +358,23 @@ mod test {
     }
     #[test]
     fn function_validation_equal_works() {
-        let func_res = Function::new("@project", vec![]);
-        let func_cmp = Function {
+        let func_got = Function::new("@project", vec![]);
+        let func_want = Function {
             func_type: FunctionTypes::Project,
             func_args: vec![],
         };
-        assert_eq!(func_res, Ok(func_cmp));
+        assert_eq!(func_got, Ok(func_want));
     }
     #[test]
     fn command_validation_equal_works() {
-        let _func_cmp = Function::new("@project", vec![])
+        let _func_want = Function::new("@project", vec![])
             .expect("failed to create a function to make the command");
-        let cmd_res = Command::new("create", "@project", vec![]);
-        let cmd_cmp = Command {
+        let cmd_got = Command::new("create", "@project", vec![]);
+        let cmd_want = Command {
             command_type: CommandTypes::Create,
-            command_func: _func_cmp,
+            command_func: _func_want,
         };
-        assert_eq!(cmd_res, Ok(cmd_cmp));
+        assert_eq!(cmd_got, Ok(cmd_want));
     }
     #[test]
     fn tip_init_works() {
@@ -388,12 +388,12 @@ mod test {
         let command = Command::new("create", "@project", vec![]).expect("command new failed");
         let tip_dir = "/home/prashant/.tip".to_string();
         let project_name = args[1].clone();
-        let tip_cmp = TipCli {
+        let tip_want = TipCli {
             tip_dir,
             project_name,
             command,
         };
-        assert_eq!(tip_cli, tip_cmp);
+        assert_eq!(tip_cli, tip_want);
     }
     #[test]
     fn perform_function_create_works() {
@@ -407,15 +407,51 @@ mod test {
         fs::create_dir("temp").expect("temp dir not created");
         let mut tip_cli = TipCli::init(&args).expect("init failed");
         tip_cli.tip_dir = "./temp".to_string();
-        let cursor_cmp = Cursor {
+        let cursor_want = Cursor {
             list: None,
             ok: Ok(()),
         };
-        let cursor_res = tip_cli.perform().expect("perform failed");
-        assert_eq!(cursor_res, cursor_cmp);
+        let cursor_got = tip_cli.perform().expect("perform failed");
+        assert_eq!(cursor_got, cursor_want);
         fs::remove_dir_all(tip_cli.tip_dir)
             .map_err(|e| format!("couldn't remove directory: {e}"))
             .unwrap();
+    }
+    #[test]
+    fn test_store_data_works() {
+        let line = "(FirstTest)";
+        let mut var = String::new();
+        store_data(&mut var, line);
+        assert_eq!(var, "FirstTest");
+    }
+    #[test]
+    fn test_store_data_not_works() {
+        let line = "(SecondTest)";
+        let mut var = String::new();
+        store_data(&mut var, line);
+        assert_ne!(var, "FirstTest");
+    }
+    #[test]
+    fn test_parse_meta_file_works() {
+        let content = "@project(test)\n@path(/home/user/.tip/test/)\n@count(1)\n";
+        let tip_meta_got = parse_meta_file(content).expect("Couldn't parse meta file");
+        let tip_meta_want = TipMeta {
+            project: "test".to_string(),
+            path: "/home/user/.tip/test/".to_string(),
+            count: 1,
+        };
+        assert_eq!(tip_meta_got, tip_meta_want);
+    }
+    #[test]
+    fn test_parse_meta_file_not_works() {
+        let content = "@project(test)\n@path(/home/user/.tip/test/)\n@count(1)\n";
+        let tip_meta_got = parse_meta_file(content).expect("Couldn't parse meta file");
+        let tip_meta_want = TipMeta {
+            project: "@project(test)".to_string(),
+            path: "@path(/home/user/.tip/test/)".to_string(),
+            count: 1,
+        };
+        assert_ne!(tip_meta_got, tip_meta_want);
     }
     #[test]
     fn perform_function_tip_works() {
@@ -449,12 +485,12 @@ mod test {
             project_name: String::from("imgv"),
             command: cmd,
         };
-        let cursor_cmp = Cursor {
+        let cursor_want = Cursor {
             list: None,
             ok: Ok(()),
         };
-        let cursor_res = tip_cli.perform().expect("perform failed");
-        assert_eq!(cursor_res, cursor_cmp);
+        let cursor_got = tip_cli.perform().expect("perform failed");
+        assert_eq!(cursor_got, cursor_want);
         fs::remove_dir_all(tip_cli.tip_dir).expect("couldn't remove directory");
     }
 }
