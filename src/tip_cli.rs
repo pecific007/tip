@@ -80,6 +80,7 @@ impl TipCli {
             fs::read_to_string(format!("{}/{}/000.tip", self.tip_dir, self.project_name).as_str())
                 .map_err(|e| format!("Error opening metadaa file: {e}"))?;
         let mut meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
+        meta_parsed.update_meta_for_new_tip(self)?;
         let new_tip_file_path = format!(
             "{}/{}/{:03}.tip",
             self.tip_dir, self.project_name, meta_parsed.count
@@ -87,14 +88,26 @@ impl TipCli {
         let mut new_tip_file =
             fs::File::create(new_tip_file_path).map_err(|_| "Error: couldn't create tip file")?;
         let func_args = self.command.command_func.func_args.clone();
+        let id_count: u32 = func_args[0].trim().parse().map_err(|_| {
+            "Wrong datatype: critical(first argument) must be an unsigned integer".to_string()
+        })?;
+        let mut title = String::new();
+        // This means we don't have to pass the title as one argument
+        func_args[1..].iter().for_each(|line| {
+            for ch in line.chars() {
+                title.push(ch);
+            }
+            title.push(' ');
+        });
         let new_file_content = format!(
             "@title({})\n@critical({})\n@done({})\n",
-            func_args[1], func_args[0], false
+            title.trim(),
+            id_count,
+            false
         );
         new_tip_file
             .write_all(new_file_content.as_bytes())
             .map_err(|e| format!("Couldn't write to new tip file: {e}"))?;
-        meta_parsed.update_meta_for_new_tip(self)?;
         Ok(Cursor {
             list: None,
             ok: Ok(()),

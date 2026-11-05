@@ -45,8 +45,10 @@ impl Function {
                 })
             }
             FunctionTypes::Tip => {
-                if args.len() != 2 {
-                    return Err("Wrong number of arguments provided: expected 2".to_string());
+                if args.len() < 2 {
+                    return Err(
+                        "Wrong number of arguments provided: expected at least 2".to_string()
+                    );
                 }
                 Ok(Function {
                     func_args: args.clone(),
