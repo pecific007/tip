@@ -80,17 +80,17 @@ impl TipCli {
             fs::read_to_string(format!("{}/{}/000.tip", self.tip_dir, self.project_name).as_str())
                 .map_err(|e| format!("Error opening metadaa file: {e}"))?;
         let mut meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
-        meta_parsed.update_meta_for_new_tip(self)?;
         let new_tip_file_path = format!(
             "{}/{}/{:03}.tip",
             self.tip_dir, self.project_name, meta_parsed.count
         );
-        let mut new_tip_file =
-            fs::File::create(new_tip_file_path).map_err(|_| "Error: couldn't create tip file")?;
         let func_args = self.command.command_func.func_args.clone();
-        let id_count: u32 = func_args[0].trim().parse().map_err(|_| {
+        let critical: u8 = func_args[0].trim().parse().map_err(|_| {
             "Wrong datatype: critical(first argument) must be an unsigned integer".to_string()
         })?;
+        if !(1..=10).contains(&critical) {
+            return Err("Value of critical can only be between 1 and 10.".to_string());
+        }
         let mut title = String::new();
         // This means we don't have to pass the title as one argument
         func_args[1..].iter().for_each(|line| {
@@ -99,10 +99,13 @@ impl TipCli {
             }
             title.push(' ');
         });
+        meta_parsed.update_meta_for_new_tip(self)?;
+        let mut new_tip_file =
+            fs::File::create(new_tip_file_path).map_err(|_| "Error: couldn't create tip file")?;
         let new_file_content = format!(
             "@title({})\n@critical({})\n@done({})\n",
             title.trim(),
-            id_count,
+            critical,
             false
         );
         new_tip_file
