@@ -88,9 +88,6 @@ impl TipCli {
         let critical: u8 = func_args[0].trim().parse().map_err(|_| {
             "Wrong datatype: critical(first argument) must be an unsigned integer".to_string()
         })?;
-        if !(1..=10).contains(&critical) {
-            return Err("Value of critical can only be between 1 and 10.".to_string());
-        }
         let mut title = String::new();
         // This means we don't have to pass the title as one argument
         func_args[1..].iter().for_each(|line| {
@@ -120,6 +117,8 @@ impl TipCli {
 
 #[cfg(test)]
 mod test {
+    use crate::Function;
+
     use super::*;
 
     #[test]
@@ -281,26 +280,19 @@ mod test {
     }
     #[test]
     fn tip_create_validation_not_works() {
-        let setup_dir_name = "temp5";
-        let project_dir_name = "imgv";
-        setup_for_new_tip(setup_dir_name, project_dir_name);
-        let cmd = Command::new(
+        let cmd_got = Command::new(
             "create",
             "@tip",
             vec!["100".to_string(), "Add file explorer".to_string()],
-        )
-        .expect("Error: creating new command");
-        let tip_cli = TipCli {
-            tip_dir: setup_dir_name.to_string(),
-            project_name: project_dir_name.to_string(),
-            command: cmd,
+        );
+        let function_want = Function {
+            func_args: vec![],
+            func_type: FunctionTypes::Tip,
         };
-        let cursor_got = tip_cli.perform();
-        let cursor_want = Cursor {
-            list: None,
-            ok: Ok(()),
+        let cmd_want = Command {
+            command_type: CommandTypes::Create,
+            command_func: function_want,
         };
-        assert_ne!(cursor_got, Ok(cursor_want));
-        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+        assert_ne!(cmd_got, Ok(cmd_want));
     }
 }

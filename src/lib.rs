@@ -50,8 +50,15 @@ impl Function {
                         "Wrong number of arguments provided: expected at least 2".to_string()
                     );
                 }
+                let critical: u8 = args[0].trim().parse().map_err(|_| {
+                    "Wrong datatype: critical(first argument) must be an unsigned integer"
+                        .to_string()
+                })?;
+                if !(1..=10).contains(&critical) {
+                    return Err("Value of critical can only be between 1 and 10.".to_string());
+                }
                 Ok(Function {
-                    func_args: args.clone(),
+                    func_args: args,
                     func_type: fn_type,
                 })
             }
