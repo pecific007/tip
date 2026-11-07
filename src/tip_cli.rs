@@ -163,10 +163,8 @@ mod test {
             .map_err(|e| format!("couldn't remove directory: {e}"))
             .unwrap();
     }
-    #[test]
-    fn perform_function_tip_works() {
-        // Assuming these will not error out.
-        match fs::create_dir("temp2") {
+    fn setup_for_new_tip(dir_name: &str, project_name: &str) {
+        match fs::create_dir(dir_name) {
             Ok(res) => res,
             Err(error) => match error.kind() {
                 std::io::ErrorKind::AlreadyExists => {}
@@ -177,13 +175,19 @@ mod test {
         }
         let cmd_setup = Command::new("create", "@project", vec![]).expect("setup: failed cmd new");
         let tip_cli_setup = TipCli {
-            tip_dir: "./temp2".to_string(),
-            project_name: String::from("imgv"),
+            tip_dir: dir_name.to_string(),
+            project_name: project_name.to_string(),
             command: cmd_setup,
         };
         tip_cli_setup
             .perform()
             .expect("setup: perform(imgv create @project) failed");
+    }
+    #[test]
+    fn perform_function_tip_works() {
+        let setup_dir_name = "temp2";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
         let cmd = Command::new(
             "create",
             "@tip",
@@ -191,8 +195,8 @@ mod test {
         )
         .expect("Error: creating new command");
         let tip_cli = TipCli {
-            tip_dir: tip_cli_setup.tip_dir.clone(),
-            project_name: String::from("imgv"),
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
             command: cmd,
         };
         let cursor_want = Cursor {
@@ -201,6 +205,102 @@ mod test {
         };
         let cursor_got = tip_cli.perform().expect("perform failed");
         assert_eq!(cursor_got, cursor_want);
-        fs::remove_dir_all(tip_cli.tip_dir).expect("couldn't remove directory");
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+    }
+    #[test]
+    fn tip_create_validation_works() {
+        let setup_dir_name = "temp0";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        let cmd = Command::new(
+            "create",
+            "@tip",
+            vec!["5".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: None,
+            ok: Ok(()),
+        };
+        assert_eq!(cursor_got, Ok(cursor_want));
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+    }
+    #[test]
+    fn tip_create_validation_works_with_1() {
+        let setup_dir_name = "temp3";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        let cmd = Command::new(
+            "create",
+            "@tip",
+            vec!["1".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: None,
+            ok: Ok(()),
+        };
+        assert_eq!(cursor_got, Ok(cursor_want));
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+    }
+    #[test]
+    fn tip_create_validation_works_with_10() {
+        let setup_dir_name = "temp4";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        let cmd = Command::new(
+            "create",
+            "@tip",
+            vec!["10".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: None,
+            ok: Ok(()),
+        };
+        assert_eq!(cursor_got, Ok(cursor_want));
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+    }
+    #[test]
+    fn tip_create_validation_not_works() {
+        let setup_dir_name = "temp5";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        let cmd = Command::new(
+            "create",
+            "@tip",
+            vec!["100".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: None,
+            ok: Ok(()),
+        };
+        assert_ne!(cursor_got, Ok(cursor_want));
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
     }
 }
