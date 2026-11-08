@@ -30,33 +30,35 @@ impl TipCli {
         })
     }
 
-    pub fn perform(&self) -> Result<Cursor, String> {
+    pub fn perform(&self) -> Cursor {
         match self.command.command_type {
             CommandTypes::Create => match self.command.command_func.func_type {
-                FunctionTypes::Project => {
-                    assert_eq!(self.command.command_func.func_type.to_str(), "@project");
-                    self.create_new_project()
-                }
-                FunctionTypes::Tip => {
-                    assert_eq!(self.command.command_func.func_type.to_str(), "@tip");
-                    self.create_new_tip()
-                }
-                other => Err(format!(
-                    "Error: invalid function for this command: {}",
-                    other.to_str()
-                )),
+                FunctionTypes::Project => Cursor {
+                    list: None,
+                    ok: self.create_new_project(),
+                },
+                FunctionTypes::Tip => Cursor {
+                    list: None,
+                    ok: self.create_new_tip(),
+                },
+                other => Cursor {
+                    list: None,
+                    ok: Err(format!(
+                        "Error: invalid function for this command: {}",
+                        other.to_str()
+                    )),
+                },
             },
-            _ => {
-                unimplemented!();
-            }
+            _ => Cursor {
+                list: None,
+                ok: Err(String::from("Not implimented")),
+            },
         }
     }
 
-    fn create_new_project(&self) -> Result<Cursor, String> {
+    fn create_new_project(&self) -> Result<(), String> {
         let new_project_dir_name = format!("{}/{}", self.tip_dir, self.project_name);
-        if let Ok(f) = fs::create_dir(&new_project_dir_name) {
-            f
-        };
+        _ = fs::create_dir(&new_project_dir_name);
         let currdir = env::current_dir()
             .map_err(|e| format!("Error: couldn't get the current directory: {e}"))?;
         let meta_data = format!(
@@ -69,13 +71,10 @@ impl TipCli {
         meta_file
             .write_all(meta_data.clone().as_bytes())
             .map_err(|e| format!("Error: couldn't write to metadata file: {e}"))?;
-        Ok(Cursor {
-            list: None,
-            ok: Ok(()),
-        })
+        Ok(())
     }
 
-    fn create_new_tip(&self) -> Result<Cursor, String> {
+    fn create_new_tip(&self) -> Result<(), String> {
         let meta_file =
             fs::read_to_string(format!("{}/{}/000.tip", self.tip_dir, self.project_name).as_str())
                 .map_err(|e| format!("Error opening metadaa file: {e}"))?;
@@ -108,10 +107,7 @@ impl TipCli {
         new_tip_file
             .write_all(new_file_content.as_bytes())
             .map_err(|e| format!("Couldn't write to new tip file: {e}"))?;
-        Ok(Cursor {
-            list: None,
-            ok: Ok(()),
-        })
+        Ok(())
     }
 }
 
@@ -156,7 +152,7 @@ mod test {
             list: None,
             ok: Ok(()),
         };
-        let cursor_got = tip_cli.perform().expect("perform failed");
+        let cursor_got = tip_cli.perform();
         assert_eq!(cursor_got, cursor_want);
         fs::remove_dir_all(tip_cli.tip_dir)
             .map_err(|e| format!("couldn't remove directory: {e}"))
@@ -178,9 +174,7 @@ mod test {
             project_name: project_name.to_string(),
             command: cmd_setup,
         };
-        tip_cli_setup
-            .perform()
-            .expect("setup: perform(imgv create @project) failed");
+        tip_cli_setup.perform();
     }
     #[test]
     fn perform_function_tip_works() {
@@ -202,7 +196,7 @@ mod test {
             list: None,
             ok: Ok(()),
         };
-        let cursor_got = tip_cli.perform().expect("perform failed");
+        let cursor_got = tip_cli.perform();
         assert_eq!(cursor_got, cursor_want);
         fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
     }
@@ -227,7 +221,7 @@ mod test {
             list: None,
             ok: Ok(()),
         };
-        assert_eq!(cursor_got, Ok(cursor_want));
+        assert_eq!(cursor_got, cursor_want);
         fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
     }
     #[test]
@@ -251,7 +245,7 @@ mod test {
             list: None,
             ok: Ok(()),
         };
-        assert_eq!(cursor_got, Ok(cursor_want));
+        assert_eq!(cursor_got, cursor_want);
         fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
     }
     #[test]
@@ -275,7 +269,7 @@ mod test {
             list: None,
             ok: Ok(()),
         };
-        assert_eq!(cursor_got, Ok(cursor_want));
+        assert_eq!(cursor_got, cursor_want);
         fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
     }
     #[test]

@@ -43,7 +43,7 @@ fn main() {
         process::exit(1);
     });
     println!("{:?}", tip_cli);
-    _ = tip_cli.perform().unwrap_or_else(|e| {
+    tip_cli.perform().ok.unwrap_or_else(|e| {
         eprintln!("Error: TipCli::perform failed: {e}");
         usage();
         process::exit(1);

@@ -45,5 +45,5 @@ pub struct Tips {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cursor {
     pub list: Option<Vec<Tips>>,
-    pub ok: Result<(), &'static str>,
+    pub ok: Result<(), String>,
 }

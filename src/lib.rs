@@ -18,7 +18,7 @@ impl FunctionTypes {
             "@project" => Ok(FunctionTypes::Project),
             "@tip" => Ok(FunctionTypes::Tip),
             "@where" => Ok(FunctionTypes::Where),
-            _ => Err("Error: invalid function".to_string()),
+            other => Err(format!("Error: invalid function: {other}")),
         }
     }
 }
@@ -62,7 +62,7 @@ impl Function {
                     func_type: fn_type,
                 })
             }
-            _ => Err("Not implimented".to_string()),
+            other => Err(format!("Not implimented: {other}")),
         }
     }
 }
@@ -82,7 +82,7 @@ impl CommandTypes {
             "delete" => Ok(CommandTypes::Delete),
             "update" => Ok(CommandTypes::Update),
             "show" => Ok(CommandTypes::Show),
-            _ => Err("Error: invalid command".to_string()),
+            other => Err(format!("Error: invalid command: {other}")),
         }
     }
 }
