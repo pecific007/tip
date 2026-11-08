@@ -1,4 +1,4 @@
-use std::{fmt, fs};
+use std::{fmt, fs, path::Path};
 
 pub mod tip_cli;
 pub mod types;
@@ -111,7 +111,7 @@ impl Command {
 
 impl TipMeta {
     pub fn update_meta_for_new_tip(&mut self, tip_cli: &TipCli) -> Result<(), String> {
-        let path = format!("{}/{}/000.tip", tip_cli.tip_dir, tip_cli.project_name);
+        let path = format!("{}/000.tip", tip_cli.get_full_path());
         let path_tmp = format!("{path}.tmp");
         self.count += 1;
         let meta_data = format!(
@@ -127,6 +127,7 @@ impl TipMeta {
 }
 
 impl ParseFile {
+    // This is not a good parser.
     fn store_data(var: &mut String, line: &str) {
         let mut buffer = String::new();
         let mut in_paren = false;
@@ -163,6 +164,9 @@ impl ParseFile {
             return Err(String::from(
                 "Error: not enough information in the metadata file.",
             ));
+        }
+        if !Path::new(project_path.as_str()).is_dir() {
+            return Err(String::from("Error: Project doesn't exists on the path."));
         }
         let id_count = project_count
             .trim()

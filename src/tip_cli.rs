@@ -18,6 +18,9 @@ impl TipCli {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
         }
         let project_name = cmd_args[1].clone();
+        if !Path::new(format!("{tip_dir}/{project_name}").as_str()).is_dir() {
+            return Err("Error: project not found.".to_string());
+        }
         let command = Command::new(
             cmd_args[2].as_str(),
             cmd_args[3].as_str(),
@@ -56,8 +59,12 @@ impl TipCli {
         }
     }
 
+    pub fn get_full_path(&self) -> String {
+        format!("{}/{}", self.tip_dir, self.project_name)
+    }
+
     fn create_new_project(&self) -> Result<(), String> {
-        let new_project_dir_name = format!("{}/{}", self.tip_dir, self.project_name);
+        let new_project_dir_name = self.get_full_path();
         _ = fs::create_dir(&new_project_dir_name);
         let currdir = env::current_dir()
             .map_err(|e| format!("Error: couldn't get the current directory: {e}"))?;
@@ -75,14 +82,10 @@ impl TipCli {
     }
 
     fn create_new_tip(&self) -> Result<(), String> {
-        let meta_file =
-            fs::read_to_string(format!("{}/{}/000.tip", self.tip_dir, self.project_name).as_str())
-                .map_err(|e| format!("Error opening metadaa file: {e}"))?;
+        let meta_file = fs::read_to_string(self.get_full_path())
+            .map_err(|e| format!("Error opening metadaa file: {e}"))?;
         let mut meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
-        let new_tip_file_path = format!(
-            "{}/{}/{:03}.tip",
-            self.tip_dir, self.project_name, meta_parsed.count
-        );
+        let new_tip_file_path = format!("{}/{:03}.tip", self.get_full_path(), meta_parsed.count);
         let func_args = self.command.command_func.func_args.clone();
         let critical: u8 = func_args[0].trim().parse().map_err(|_| {
             "Wrong datatype: critical(first argument) must be an unsigned integer".to_string()
