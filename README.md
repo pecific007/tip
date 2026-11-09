@@ -1,9 +1,7 @@
 # Tip:
 ![License](https://img.shields.io/badge/license-BSD_2_Clause-blue.svg) \
 TIP: TODOs-Issues-Progress \
-It is a todo/issue tracker. It is inspired by [tatr](https://github.com/tsoding/tatr). \
-
-For this project a `tip` is used to refer to either the program itself, or it to issue/todo depending on the context.
+It is a todo/issue tracker. It is inspired by [tatr](https://github.com/tsoding/tatr).
 
 ### Usage:
 

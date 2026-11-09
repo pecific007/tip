@@ -40,7 +40,7 @@ pub struct TipMeta {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Tips {
+pub struct TipFile {
     pub id: u32,
     pub title: String,
     pub critical: u8,
@@ -49,6 +49,6 @@ pub struct Tips {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cursor {
-    pub list: Option<Vec<Tips>>,
+    pub list: Option<Vec<TipFile>>,
     pub ok: Result<(), String>,
 }

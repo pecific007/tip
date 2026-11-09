@@ -11,8 +11,8 @@ pub struct TipCli {
 
 impl TipCli {
     pub fn init(cmd_args: &[String]) -> Result<TipCli, String> {
-        let home_dir =
-            env::var("HOME").map_err(|_| "Error: could not find the home directory: {err}")?;
+        let home_dir = env::var("HOME")
+            .map_err(|err| format!("Error: could not find the home directory: {err}"))?;
         let tip_dir = format!("{home_dir}/.tip");
         if !Path::new(tip_dir.as_str()).is_dir() {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
@@ -90,6 +90,9 @@ impl TipCli {
         let critical: u8 = func_args[0].trim().parse().map_err(|_| {
             "Wrong datatype: critical(first argument) must be an unsigned integer".to_string()
         })?;
+        // if !Path::new(meta_parsed.path.trim()).is_dir() {
+        //     return Err(String::from("Error: Project doesn't exists on the path."));
+        // }
         let mut title = String::new();
         // This means we don't have to pass the title as one argument
         func_args[1..].iter().for_each(|line| {
@@ -130,7 +133,8 @@ mod test {
         ];
         let tip_cli = TipCli::init(&args).expect("init failed");
         let command = Command::new("create", "@project", vec![]).expect("command new failed");
-        let tip_dir = "/home/user/.tip".to_string();
+        let home_dir = env::var("HOME").expect("Error: could not find the home directory");
+        let tip_dir = format!("{home_dir}/.tip");
         let project_name = args[1].clone();
         let tip_want = TipCli {
             tip_dir,
