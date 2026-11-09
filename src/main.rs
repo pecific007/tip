@@ -15,7 +15,7 @@ fn usage() {
     eprintln!("           @project        create new project"); // sort of implimented
     eprintln!("           @tip            create new tip"); // sort of implimented
     eprintln!("           @where          specify a condition"); // not implimented
-    eprintln!("use `help command|function <name>` to learn more about them."); // not implimented
+    eprintln!("Not implemented: use `help command|function <name>` to learn more about them."); // not implimented
 }
 
 fn main() {
@@ -32,8 +32,7 @@ fn main() {
         usage();
         process::exit(1);
     }
-    println!("so far so good.");
-    println!("CmdArgs:");
+    println!("Args:");
     println!("    project: {}", args[1]);
     println!("    command: {}", args[2]);
     println!("    function: name {}", args[3]);

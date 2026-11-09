@@ -130,7 +130,7 @@ mod test {
         ];
         let tip_cli = TipCli::init(&args).expect("init failed");
         let command = Command::new("create", "@project", vec![]).expect("command new failed");
-        let tip_dir = "/home/prashant/.tip".to_string();
+        let tip_dir = "/home/user/.tip".to_string();
         let project_name = args[1].clone();
         let tip_want = TipCli {
             tip_dir,
