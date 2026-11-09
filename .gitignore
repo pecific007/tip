@@ -1,4 +1,4 @@
 /target
-/.planning
-/README.md
-/temp
+.planning
+README.md
+temp*

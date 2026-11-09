@@ -18,9 +18,9 @@ impl TipCli {
             fs::create_dir(&tip_dir).map_err(|_| "Error: tip dir couldn't be created")?;
         }
         let project_name = cmd_args[1].clone();
-        if !Path::new(format!("{tip_dir}/{project_name}").as_str()).is_dir() {
-            return Err("Error: project not found.".to_string());
-        }
+        // if !Path::new(format!("{tip_dir}/{project_name}").as_str()).is_dir() {
+        //     return Err("Error: project not found.".to_string());
+        // }
         let command = Command::new(
             cmd_args[2].as_str(),
             cmd_args[3].as_str(),
@@ -69,7 +69,7 @@ impl TipCli {
         let currdir = env::current_dir()
             .map_err(|e| format!("Error: couldn't get the current directory: {e}"))?;
         let meta_data = format!(
-            "@project({})\n@path({})\n@count(1)\n",
+            "@project:{}\n@path:{}\n@count:1\n",
             self.project_name,
             currdir.display()
         );
@@ -82,7 +82,7 @@ impl TipCli {
     }
 
     fn create_new_tip(&self) -> Result<(), String> {
-        let meta_file = fs::read_to_string(self.get_full_path())
+        let meta_file = fs::read_to_string(format!("{}/000.tip", self.get_full_path()))
             .map_err(|e| format!("Error opening metadaa file: {e}"))?;
         let mut meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
         let new_tip_file_path = format!("{}/{:03}.tip", self.get_full_path(), meta_parsed.count);
@@ -102,7 +102,7 @@ impl TipCli {
         let mut new_tip_file =
             fs::File::create(new_tip_file_path).map_err(|_| "Error: couldn't create tip file")?;
         let new_file_content = format!(
-            "@title({})\n@critical({})\n@done({})\n",
+            "@title:{}\n@critical:{}\n@done:{}\n",
             title.trim(),
             critical,
             false

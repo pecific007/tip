@@ -15,6 +15,11 @@ pub enum CommandTypes {
 
 pub struct ParseFile;
 
+impl ParseFile {
+    pub const TOKEN_VARIABLE: char = '@';
+    pub const TOKEN_ASSIGNMENT: char = ':';
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub func_type: FunctionTypes,

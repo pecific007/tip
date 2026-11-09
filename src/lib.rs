@@ -1,4 +1,4 @@
-use std::{fmt, fs, path::Path};
+use std::{collections::HashMap, fmt, fs};
 
 pub mod tip_cli;
 pub mod types;
@@ -127,55 +127,76 @@ impl TipMeta {
 }
 
 impl ParseFile {
-    // This is not a good parser.
-    fn store_data(var: &mut String, line: &str) {
-        let mut buffer = String::new();
-        let mut in_paren = false;
-        for ch in line.chars() {
+    fn parse_file(content: &str) -> Result<HashMap<String, String>, String> {
+        let mut values = HashMap::new();
+        let mut buffer_val = String::new();
+        let mut buffer_var = String::new();
+        let mut is_var = false;
+        let mut is_val = false;
+        for ch in content.chars() {
             match ch {
-                '(' => {
-                    in_paren = true;
-                    buffer.clear();
+                ParseFile::TOKEN_VARIABLE => {
+                    if is_val {
+                        values.insert(buffer_var.clone(), buffer_val.clone());
+                    }
+                    if !is_var {
+                        is_var = true;
+                        is_val = false;
+                        buffer_var.clear();
+                    }
                 }
-                ')' if in_paren => {
-                    *var = std::mem::take(&mut buffer);
-                    in_paren = false;
+                ParseFile::TOKEN_ASSIGNMENT => {
+                    if !is_val {
+                        is_val = true;
+                        is_var = false;
+                        buffer_val.clear();
+                    }
                 }
-                c if in_paren => buffer.push(c),
-                _ => {}
+                '\n' => {
+                    values.insert(buffer_var.clone(), buffer_val.clone());
+                }
+                c => {
+                    if is_var {
+                        assert!(!is_val, "some problem 1");
+                        buffer_var.push(c);
+                    } else if is_val {
+                        assert!(!is_var, "some problem 2");
+                        buffer_val.push(c);
+                    }
+                }
             }
         }
+        Ok(values)
     }
 
     fn parse_meta_file(content: &str) -> Result<TipMeta, String> {
-        let mut project_name: String = String::new();
-        let mut project_path: String = String::new();
-        let mut project_count: String = String::new();
-        for line in content.lines() {
-            if line.starts_with("@project") {
-                ParseFile::store_data(&mut project_name, line);
-            } else if line.starts_with("@path") {
-                ParseFile::store_data(&mut project_path, line);
-            } else if line.starts_with("@count") {
-                ParseFile::store_data(&mut project_count, line);
+        let parsed = ParseFile::parse_file(content).map_err(|e| format!("couldn't parse: {e}"))?;
+        let project = match parsed.get("project") {
+            Some(p) => p,
+            _ => {
+                return Err("Couldn't get project".to_string());
             }
-        }
-        if project_name.is_empty() || project_path.is_empty() || project_count.is_empty() {
-            return Err(String::from(
-                "Error: not enough information in the metadata file.",
-            ));
-        }
-        if !Path::new(project_path.as_str()).is_dir() {
-            return Err(String::from("Error: Project doesn't exists on the path."));
-        }
-        let id_count = project_count
-            .trim()
-            .parse()
-            .map_err(|e| format!("Error: {e}"))?;
+        };
+        let path = match parsed.get("path") {
+            Some(p) => p,
+            _ => {
+                return Err("Couldn't get path".to_string());
+            }
+        };
+        let count = match parsed.get("count") {
+            Some(c) => c,
+            _ => {
+                return Err("Couldn't get count".to_string());
+            }
+        };
+        let count: u32 = count.trim().parse().map_err(|e| format!("Error: {e}"))?;
+        // if !Path::new(path.trim()).is_dir() {
+        //     return Err(String::from("Error: Project doesn't exists on the path."));
+        // }
         Ok(TipMeta {
-            project: project_name.clone(),
-            path: project_path.clone(),
-            count: id_count,
+            project: project.trim().to_string(),
+            path: path.trim().to_string(),
+            count,
         })
     }
 }
@@ -241,22 +262,22 @@ mod test {
         assert_eq!(cmd_got, Ok(cmd_want));
     }
     #[test]
-    fn test_store_data_works() {
-        let line = "(FirstTest)";
-        let mut var = String::new();
-        ParseFile::store_data(&mut var, line);
-        assert_eq!(var, "FirstTest");
+    fn test_parse_file_works() {
+        let mut parsed_want = HashMap::new();
+        let parsed_got = ParseFile::parse_file("@project:test\n").expect("parse_file failed");
+        parsed_want.insert(String::from("project"), String::from("test"));
+        assert_eq!(parsed_got, parsed_want);
     }
     #[test]
-    fn test_store_data_not_works() {
-        let line = "(SecondTest)";
-        let mut var = String::new();
-        ParseFile::store_data(&mut var, line);
-        assert_ne!(var, "FirstTest");
+    fn test_parse_file_not_works() {
+        let mut parsed_want = HashMap::new();
+        let parsed_got = ParseFile::parse_file("@project:test\n").expect("parse_file failed");
+        parsed_want.insert(String::from("count"), String::from("1"));
+        assert_ne!(parsed_got, parsed_want);
     }
     #[test]
     fn test_parse_meta_file_works() {
-        let content = "@project(test)\n@path(/home/user/.tip/test/)\n@count(1)\n";
+        let content = "@project:test\n@path:/home/user/.tip/test/\n@count:1\n";
         let tip_meta_got = ParseFile::parse_meta_file(content).expect("Couldn't parse meta file");
         let tip_meta_want = TipMeta {
             project: "test".to_string(),
@@ -267,11 +288,11 @@ mod test {
     }
     #[test]
     fn test_parse_meta_file_not_works() {
-        let content = "@project(test)\n@path(/home/user/.tip/test/)\n@count(1)\n";
+        let content = "@project:test\n@path:/home/user/.tip/test/\n@count:1\n";
         let tip_meta_got = ParseFile::parse_meta_file(content).expect("Couldn't parse meta file");
         let tip_meta_want = TipMeta {
-            project: "@project(test)".to_string(),
-            path: "@path(/home/user/.tip/test/)".to_string(),
+            project: "@project:test".to_string(),
+            path: "@path:/home/user/.tip/test/".to_string(),
             count: 1,
         };
         assert_ne!(tip_meta_got, tip_meta_want);
