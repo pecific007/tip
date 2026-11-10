@@ -8,6 +8,7 @@ pub use types::*;
 impl FunctionTypes {
     pub const fn to_str(&self) -> &'static str {
         match &self {
+            FunctionTypes::All => "@all",
             FunctionTypes::Project => "@project",
             FunctionTypes::Tip => "@tip",
             FunctionTypes::Where => "@where",
@@ -15,6 +16,7 @@ impl FunctionTypes {
     }
     pub fn new(function: &str) -> Result<FunctionTypes, String> {
         match function {
+            "@all" => Ok(FunctionTypes::All),
             "@project" => Ok(FunctionTypes::Project),
             "@tip" => Ok(FunctionTypes::Tip),
             "@where" => Ok(FunctionTypes::Where),
@@ -34,8 +36,8 @@ impl Function {
     pub fn new(func: &str, args: Vec<String>) -> Result<Function, String> {
         let fn_type = FunctionTypes::new(func)?;
         match fn_type {
-            FunctionTypes::Project => {
-                // the @project function accepts 0 arguments
+            FunctionTypes::All | FunctionTypes::Project => {
+                // @project and @all functions accept 0 arguments
                 if !args.is_empty() {
                     return Err("Wrong number of arguments provided: expected none.".to_string());
                 }
@@ -45,6 +47,7 @@ impl Function {
                 })
             }
             FunctionTypes::Tip => {
+                // @tip expects at least 2 arguments: $1 = critical $2... = title
                 if args.len() < 2 {
                     return Err(
                         "Wrong number of arguments provided: expected at least 2".to_string()
@@ -62,7 +65,7 @@ impl Function {
                     func_type: fn_type,
                 })
             }
-            other => Err(format!("Not implimented: {other}")),
+            other => Err(format!("Not implemented: {other}")),
         }
     }
 }
@@ -115,7 +118,7 @@ impl TipMeta {
         let path_tmp = format!("{path}.tmp");
         self.count += 1;
         let meta_data = format!(
-            "@project({})\n@path({})\n@count({})\n",
+            "@project:{}\n@path:{}\n@count:{}\n",
             self.project, self.path, self.count,
         );
         fs::write(&path_tmp, &meta_data)
@@ -166,7 +169,6 @@ impl ParseFile {
                 }
             }
         }
-        println!("{:?}", values);
         values
     }
 

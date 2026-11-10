@@ -52,9 +52,25 @@ impl TipCli {
                     )),
                 },
             },
+            CommandTypes::Show => match self.command.command_func.func_type {
+                FunctionTypes::All => match self.show_tips() {
+                    Ok(r) => Cursor {
+                        list: Some(r),
+                        ok: Ok(()),
+                    },
+                    Err(e) => Cursor {
+                        list: None,
+                        ok: Err(format!("Couldn't show tips: {e}")),
+                    },
+                },
+                _ => Cursor {
+                    list: None,
+                    ok: Err(String::from("Not implimented")),
+                },
+            },
             _ => Cursor {
                 list: None,
-                ok: Err(String::from("Not implimented")),
+                ok: Err(String::from("Not implemented")),
             },
         }
     }
@@ -114,6 +130,28 @@ impl TipCli {
             .write_all(new_file_content.as_bytes())
             .map_err(|e| format!("Couldn't write to new tip file: {e}"))?;
         Ok(())
+    }
+
+    fn show_tips(&self) -> Result<Vec<String>, String> {
+        // For now it will show all tips that have `@done:false`
+        let mut res: Vec<String> = vec![];
+        let meta_file = fs::read_to_string(format!("{}/000.tip", self.get_full_path()))
+            .map_err(|e| format!("Error opening metadaa file: {e}"))?;
+        let meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
+        for i in 1..meta_parsed.count {
+            let file_content = fs::read_to_string(format!("{}/{:03}.tip", self.get_full_path(), i))
+                .map_err(|e| format!("Error opening tip file: {e}"))?;
+            let file_parsed = ParseFile::parse_tip_file(file_content.as_str(), i)?;
+            if file_parsed.done {
+                continue;
+            }
+            let result_string = format!(
+                "@id:{:03} | @title:{} | @critical:{} | @done:false",
+                i, file_parsed.title, file_parsed.critical
+            );
+            res.push(result_string);
+        }
+        Ok(res)
     }
 }
 
@@ -295,5 +333,73 @@ mod test {
             command_func: function_want,
         };
         assert_ne!(cmd_got, Ok(cmd_want));
+    }
+    #[test]
+    fn show_tips_works() {
+        let setup_dir_name = "temp_show_tips_1";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        let cmd = Command::new(
+            "create",
+            "@tip",
+            vec!["10".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let _cursor_setup = tip_cli.perform();
+
+        let cmd = Command::new("show", "@all", vec![]).expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: Some(vec![String::from(
+                "@id:001 | @title:Add file explorer | @critical:10 | @done:false",
+            )]),
+            ok: Ok(()),
+        };
+        assert_eq!(cursor_got, cursor_want);
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+    }
+    #[test]
+    fn show_tips_not_works() {
+        let setup_dir_name = "temp_show_tips_2";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        let cmd = Command::new(
+            "create",
+            "@tip",
+            vec!["10".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let _cursor_setup = tip_cli.perform();
+
+        let cmd = Command::new("show", "@all", vec![]).expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: Some(vec![String::from(
+                "@id:001 | @title:Add file explorer | @critical:10 | @done:true",
+            )]),
+            ok: Ok(()),
+        };
+        assert_ne!(cursor_got, cursor_want);
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
     }
 }

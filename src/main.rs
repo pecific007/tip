@@ -7,15 +7,15 @@ fn usage() {
     eprintln!("    -- project:");
     eprintln!("          <project>        The name of the project");
     eprintln!("    -- commands:");
-    eprintln!("           create          to create project|tip"); // sort of implimented
-    eprintln!("           update          to update project|tip"); // not implimented
-    eprintln!("           delete          to delete project|tip"); // not implimented
-    eprintln!("           show            to show   project|tip"); // not implimented
+    eprintln!("           create          to create project|tip"); // sort of implemented
+    eprintln!("           update          to update project|tip"); // not implemented
+    eprintln!("           delete          to delete project|tip"); // not implemented
+    eprintln!("           show            to show   project|tip"); // not implemented
     eprintln!("    -- functions:");
-    eprintln!("           @project        create new project"); // sort of implimented
-    eprintln!("           @tip            create new tip"); // sort of implimented
-    eprintln!("           @where          specify a condition"); // not implimented
-    eprintln!("Not implemented: use `help command|function <name>` to learn more about them."); // not implimented
+    eprintln!("           @project        create new project"); // sort of implemented
+    eprintln!("           @tip            create new tip"); // sort of implemented
+    eprintln!("           @where          specify a condition"); // not implemented
+    eprintln!("Not implemented: use `help command|function <name>` to learn more about them."); // not implemented
 }
 
 fn main() {
@@ -41,10 +41,17 @@ fn main() {
         eprintln!("Error: TipCli::init failed: {e}");
         process::exit(1);
     });
-    println!("{:?}", tip_cli);
-    tip_cli.perform().ok.unwrap_or_else(|e| {
+    println!("{:?}\n", tip_cli);
+    let cursor = tip_cli.perform();
+    cursor.ok.unwrap_or_else(|e| {
         eprintln!("Error: TipCli::perform failed: {e}");
         usage();
         process::exit(1);
     });
+    println!("\n//---- Cursor ----//\n");
+    if let Some(l) = cursor.list {
+        for item in l {
+            println!("{item}");
+        }
+    }
 }

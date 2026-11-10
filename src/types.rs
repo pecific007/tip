@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FunctionTypes {
+    All,
     Project,
     Tip,
     Where,
@@ -49,6 +50,6 @@ pub struct TipFile {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cursor {
-    pub list: Option<Vec<TipFile>>,
+    pub list: Option<Vec<String>>,
     pub ok: Result<(), String>,
 }

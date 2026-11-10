@@ -23,7 +23,7 @@ Usage: tip <project> [command] (function)
            @where          specify a condition
 Not implemented: use `help command|function <name>` to learn more about them.
 ```
-```bash
+```console
 $ tip imgv create @project
 Created: new Project: imgv
 @path: /home/pecific007/Projects/c-lang/imgv
@@ -33,11 +33,12 @@ Created: new Tip: Add file explorer
 @id: 001
 @critical: 4
 @done: false
-```
-Not yet implimented: it's the general idea of how these functions would work:
-```console
+
 $ tip imgv show @all
-@id: 001 @title: Add file explorer @critical 4 @done: false
+@id:001 | @title:Add file explorer | @critical:4 | @done:false
+```
+Not yet implemented: it's the general idea of how these functions will work:
+```console
 
 $ tip imgv show @where done
 Tip: No data found.
@@ -78,6 +79,7 @@ Adding a new `tip` will create a file in the project file (`tip_dir/imgv`) with 
   - [ ] update
   - [ ] show
 - [ ] implement functions
+  - [x] all
   - [x] project
   - [x] tip
   - [ ] where
@@ -87,10 +89,16 @@ Adding a new `tip` will create a file in the project file (`tip_dir/imgv`) with 
 
 ### Examples:
 1) This will create a new project called imgv
-    ```bash
+    ```console
     $ tip imgv create @project
     ```
 
 2) This will create a new tip with title = 'fix bug in main.c at line 30' and critical = 10
-    ```bash
+    ```console
     $ tip imgv create @tip 10 'fix bug in main.c at line 30'
+    ```
+
+3) This will show all the tips with `@done:false`
+    ```console
+    $ tip imgv show @all
+    ```
