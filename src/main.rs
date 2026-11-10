@@ -43,15 +43,11 @@ fn main() {
     });
     println!("{:?}\n", tip_cli);
     let cursor = tip_cli.perform();
-    cursor.ok.unwrap_or_else(|e| {
+    cursor.ok.as_ref().unwrap_or_else(|e| {
         eprintln!("Error: TipCli::perform failed: {e}");
         usage();
         process::exit(1);
     });
     println!("\n//---- Cursor ----//\n");
-    if let Some(l) = cursor.list {
-        for item in l {
-            println!("{item}");
-        }
-    }
+    cursor.print_cursor_list();
 }

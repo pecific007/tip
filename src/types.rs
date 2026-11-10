@@ -50,6 +50,6 @@ pub struct TipFile {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cursor {
-    pub list: Option<Vec<String>>,
+    pub list: Option<Vec<TipFile>>,
     pub ok: Result<(), String>,
 }

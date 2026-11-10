@@ -234,6 +234,19 @@ impl ParseFile {
     }
 }
 
+impl Cursor {
+    pub fn print_cursor_list(&self) {
+        if let Some(l) = &self.list {
+            for t in l {
+                println!(
+                    "@id:{} | @title:{} | @critical:{} | @done:{}",
+                    t.id, t.title, t.critical, t.done
+                );
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

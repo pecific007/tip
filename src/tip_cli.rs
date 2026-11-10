@@ -1,6 +1,6 @@
 use std::{env, fs, io::prelude::*, path::Path};
 
-use crate::{Command, CommandTypes, Cursor, FunctionTypes, ParseFile};
+use crate::{Command, CommandTypes, Cursor, FunctionTypes, ParseFile, TipFile};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TipCli {
@@ -53,7 +53,7 @@ impl TipCli {
                 },
             },
             CommandTypes::Show => match self.command.command_func.func_type {
-                FunctionTypes::All => match self.show_tips() {
+                FunctionTypes::All => match self.show_all_tips() {
                     Ok(r) => Cursor {
                         list: Some(r),
                         ok: Ok(()),
@@ -132,9 +132,9 @@ impl TipCli {
         Ok(())
     }
 
-    fn show_tips(&self) -> Result<Vec<String>, String> {
+    fn show_all_tips(&self) -> Result<Vec<TipFile>, String> {
         // For now it will show all tips that have `@done:false`
-        let mut res: Vec<String> = vec![];
+        let mut res: Vec<TipFile> = vec![];
         let meta_file = fs::read_to_string(format!("{}/000.tip", self.get_full_path()))
             .map_err(|e| format!("Error opening metadaa file: {e}"))?;
         let meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
@@ -142,14 +142,7 @@ impl TipCli {
             let file_content = fs::read_to_string(format!("{}/{:03}.tip", self.get_full_path(), i))
                 .map_err(|e| format!("Error opening tip file: {e}"))?;
             let file_parsed = ParseFile::parse_tip_file(file_content.as_str(), i)?;
-            if file_parsed.done {
-                continue;
-            }
-            let result_string = format!(
-                "@id:{:03} | @title:{} | @critical:{} | @done:false",
-                i, file_parsed.title, file_parsed.critical
-            );
-            res.push(result_string);
+            res.push(file_parsed);
         }
         Ok(res)
     }
@@ -360,9 +353,12 @@ mod test {
         };
         let cursor_got = tip_cli.perform();
         let cursor_want = Cursor {
-            list: Some(vec![String::from(
-                "@id:001 | @title:Add file explorer | @critical:10 | @done:false",
-            )]),
+            list: Some(vec![TipFile {
+                id: 1,
+                title: String::from("Add file explorer"),
+                critical: 10,
+                done: false,
+            }]),
             ok: Ok(()),
         };
         assert_eq!(cursor_got, cursor_want);
@@ -394,9 +390,12 @@ mod test {
         };
         let cursor_got = tip_cli.perform();
         let cursor_want = Cursor {
-            list: Some(vec![String::from(
-                "@id:001 | @title:Add file explorer | @critical:10 | @done:true",
-            )]),
+            list: Some(vec![TipFile {
+                id: 1,
+                title: String::from("Add file explorer"),
+                critical: 10,
+                done: true,
+            }]),
             ok: Ok(()),
         };
         assert_ne!(cursor_got, cursor_want);
