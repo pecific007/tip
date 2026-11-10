@@ -136,7 +136,7 @@ impl TipCli {
         // For now it will show all tips that have `@done:false`
         let mut res: Vec<TipFile> = vec![];
         let meta_file = fs::read_to_string(format!("{}/000.tip", self.get_full_path()))
-            .map_err(|e| format!("Error opening metadaa file: {e}"))?;
+            .map_err(|e| format!("Error opening metadata file: {e}"))?;
         let meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
         for i in 1..meta_parsed.count {
             let file_content = fs::read_to_string(format!("{}/{:03}.tip", self.get_full_path(), i))
