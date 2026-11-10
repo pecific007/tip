@@ -202,7 +202,7 @@ mod test {
             Err(error) => match error.kind() {
                 std::io::ErrorKind::AlreadyExists => {}
                 _ => {
-                    panic!("Error: {error:?}")
+                    panic!("Error: {error}")
                 }
             },
         }

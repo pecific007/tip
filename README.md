@@ -1,7 +1,8 @@
 # Tip:
 ![License](https://img.shields.io/badge/license-BSD_2_Clause-blue.svg) \
 TIP: TODOs-Issues-Progress \
-It is a todo/issue tracker. It is inspired by [tatr](https://github.com/tsoding/tatr).
+It is a todo/issue tracker inspired by [tatr](https://github.com/tsoding/tatr). \
+It is primarily made for and tested on Linux ([Arch](https://archlinux.org/) btw).
 
 ### Usage:
 
