@@ -1,6 +1,9 @@
 use std::{env, fs, io::prelude::*, path::Path};
 
-use crate::{Command, CommandTypes, Cursor, FunctionTypes, ParseFile, TipFile};
+#[allow(unused_imports)]
+use crate::{
+    Command, CommandTypes, Condition, Cursor, FunctionTypes, ParseFile, TipColTypes, TipFile,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TipCli {
@@ -22,8 +25,8 @@ impl TipCli {
         //     return Err("Error: project not found.".to_string());
         // }
         let command = Command::new(
-            cmd_args[2].as_str(),
-            cmd_args[3].as_str(),
+            cmd_args[2].to_lowercase().as_str(),
+            cmd_args[3].to_lowercase().as_str(),
             cmd_args[4..].to_vec(),
         )?;
         Ok(TipCli {
@@ -54,6 +57,17 @@ impl TipCli {
             },
             CommandTypes::Show => match self.command.command_func.func_type {
                 FunctionTypes::All => match self.show_all_tips() {
+                    Ok(r) => Cursor {
+                        list: Some(r),
+                        ok: Ok(()),
+                    },
+                    Err(e) => Cursor {
+                        list: None,
+                        ok: Err(format!("Couldn't show tips: {e}")),
+                    },
+                },
+                // TODO: ADD BETTER ERROR HANDLING!!
+                FunctionTypes::Where => match self.show_tips_where() {
                     Ok(r) => Cursor {
                         list: Some(r),
                         ok: Ok(()),
@@ -142,12 +156,56 @@ impl TipCli {
             let file_content = fs::read_to_string(format!("{}/{:03}.tip", self.get_full_path(), i))
                 .map_err(|e| format!("Error opening tip file: {e}"))?;
             let file_parsed = ParseFile::parse_tip_file(file_content.as_str(), i)?;
-            res.push(file_parsed);
+            if file_parsed.done == TipColTypes::Done(false) {
+                res.push(file_parsed);
+            }
+        }
+        Ok(res)
+    }
+
+    fn show_tips_where(&self) -> Result<Vec<TipFile>, String> {
+        let mut res: Vec<TipFile> = vec![];
+        let expr = Condition::parse_expression(self.command.command_func.func_args.clone());
+        // println!("expr: {:?}", expr);
+        let meta_file = fs::read_to_string(format!("{}/000.tip", self.get_full_path()))
+            .map_err(|e| format!("Error opening metadata file: {e}"))?;
+        let meta_parsed = ParseFile::parse_meta_file(&meta_file)?;
+        for i in 1..meta_parsed.count {
+            let file_content = fs::read_to_string(format!("{}/{:03}.tip", self.get_full_path(), i))
+                .map_err(|e| format!("Error opening tip file: {e}"))?;
+            let file_parsed = ParseFile::parse_tip_file(file_content.as_str(), i)?;
+            if expr.operator == Condition::AND {
+                let lt_con =
+                    Condition::compare(*expr.operand_lt.get_val_condition()?, file_parsed.clone())?;
+                let rt_con = Condition::compare(
+                    *expr.operand_rt.get_val_condition()?.clone(),
+                    file_parsed.clone(),
+                )?;
+                if lt_con && rt_con {
+                    res.push(file_parsed);
+                }
+            } else if expr.operator == Condition::OR {
+                let lt_con =
+                    Condition::compare(*expr.operand_lt.get_val_condition()?, file_parsed.clone())?;
+                let rt_con = Condition::compare(
+                    *expr.operand_rt.get_val_condition()?.clone(),
+                    file_parsed.clone(),
+                )?;
+                if lt_con || rt_con {
+                    res.push(file_parsed);
+                }
+            } else {
+                let res_expression = Condition::compare(expr.clone(), file_parsed.clone())?;
+                if res_expression {
+                    res.push(file_parsed);
+                }
+            }
         }
         Ok(res)
     }
 }
 
+// This stuff is more like integration testing, I should do that at some piont
 #[cfg(test)]
 mod test {
     use crate::Function;
@@ -216,7 +274,7 @@ mod test {
     }
     #[test]
     fn perform_function_tip_works() {
-        let setup_dir_name = "temp2";
+        let setup_dir_name = "perform_func_tip_1";
         let project_dir_name = "imgv";
         setup_for_new_tip(setup_dir_name, project_dir_name);
         let cmd = Command::new(
@@ -240,7 +298,7 @@ mod test {
     }
     #[test]
     fn tip_create_validation_works() {
-        let setup_dir_name = "temp0";
+        let setup_dir_name = "tip_create_validation_1";
         let project_dir_name = "imgv";
         setup_for_new_tip(setup_dir_name, project_dir_name);
         let cmd = Command::new(
@@ -264,7 +322,7 @@ mod test {
     }
     #[test]
     fn tip_create_validation_works_with_1() {
-        let setup_dir_name = "temp3";
+        let setup_dir_name = "tip_create_validation_2";
         let project_dir_name = "imgv";
         setup_for_new_tip(setup_dir_name, project_dir_name);
         let cmd = Command::new(
@@ -288,7 +346,7 @@ mod test {
     }
     #[test]
     fn tip_create_validation_works_with_10() {
-        let setup_dir_name = "temp4";
+        let setup_dir_name = "tip_create_validation_3";
         let project_dir_name = "imgv";
         setup_for_new_tip(setup_dir_name, project_dir_name);
         let cmd = Command::new(
@@ -332,18 +390,14 @@ mod test {
         let setup_dir_name = "temp_show_tips_1";
         let project_dir_name = "imgv";
         setup_for_new_tip(setup_dir_name, project_dir_name);
-        let cmd = Command::new(
+        setup_create_new_tips(
+            setup_dir_name,
+            project_dir_name,
             "create",
             "@tip",
             vec!["10".to_string(), "Add file explorer".to_string()],
         )
-        .expect("Error: creating new command");
-        let tip_cli = TipCli {
-            tip_dir: setup_dir_name.to_string(),
-            project_name: project_dir_name.to_string(),
-            command: cmd,
-        };
-        let _cursor_setup = tip_cli.perform();
+        .expect("SETUP: CREATING TIP FAILED!");
 
         let cmd = Command::new("show", "@all", vec![]).expect("Error: creating new command");
         let tip_cli = TipCli {
@@ -354,10 +408,10 @@ mod test {
         let cursor_got = tip_cli.perform();
         let cursor_want = Cursor {
             list: Some(vec![TipFile {
-                id: 1,
-                title: String::from("Add file explorer"),
-                critical: 10,
-                done: false,
+                id: TipColTypes::Id(1),
+                title: TipColTypes::Title(String::from("Add file explorer")),
+                critical: TipColTypes::Critical(10),
+                done: TipColTypes::Done(false),
             }]),
             ok: Ok(()),
         };
@@ -369,18 +423,14 @@ mod test {
         let setup_dir_name = "temp_show_tips_2";
         let project_dir_name = "imgv";
         setup_for_new_tip(setup_dir_name, project_dir_name);
-        let cmd = Command::new(
+        setup_create_new_tips(
+            setup_dir_name,
+            project_dir_name,
             "create",
             "@tip",
             vec!["10".to_string(), "Add file explorer".to_string()],
         )
-        .expect("Error: creating new command");
-        let tip_cli = TipCli {
-            tip_dir: setup_dir_name.to_string(),
-            project_name: project_dir_name.to_string(),
-            command: cmd,
-        };
-        let _cursor_setup = tip_cli.perform();
+        .expect("SETUP: CREATING TIP FAILED!");
 
         let cmd = Command::new("show", "@all", vec![]).expect("Error: creating new command");
         let tip_cli = TipCli {
@@ -391,10 +441,121 @@ mod test {
         let cursor_got = tip_cli.perform();
         let cursor_want = Cursor {
             list: Some(vec![TipFile {
-                id: 1,
-                title: String::from("Add file explorer"),
-                critical: 10,
-                done: true,
+                id: TipColTypes::Id(1),
+                title: TipColTypes::Title(String::from("Add file explorer")),
+                critical: TipColTypes::Critical(10),
+                done: TipColTypes::Done(true),
+            }]),
+            ok: Ok(()),
+        };
+        assert_ne!(cursor_got, cursor_want);
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+    }
+    fn setup_create_new_tips(
+        dir_set: &str,
+        dir_prj: &str,
+        cmd: &str,
+        func: &str,
+        args: Vec<String>,
+    ) -> Result<(), String> {
+        let cmd = Command::new(cmd, func, args).expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: dir_set.to_string(),
+            project_name: dir_prj.to_string(),
+            command: cmd,
+        };
+        let _cursor_setup = tip_cli.perform();
+        match _cursor_setup.ok {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+    #[test]
+    fn show_tips_where_works() {
+        let setup_dir_name = "temp_show_tips_where_1";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        setup_create_new_tips(
+            setup_dir_name,
+            project_dir_name,
+            "create",
+            "@tip",
+            vec!["10".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("SETUP: CREATING TIP FAILED!");
+        setup_create_new_tips(
+            setup_dir_name,
+            project_dir_name,
+            "create",
+            "@tip",
+            vec!["4".to_string(), "improve API".to_string()],
+        )
+        .expect("SETUP: CREATING TIP FAILED!");
+
+        let cmd = Command::new(
+            "show",
+            "@where",
+            vec!["critical".to_string(), "is".to_string(), "4".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: Some(vec![TipFile {
+                id: TipColTypes::Id(2),
+                title: TipColTypes::Title(String::from("improve API")),
+                critical: TipColTypes::Critical(4),
+                done: TipColTypes::Done(false),
+            }]),
+            ok: Ok(()),
+        };
+        assert_eq!(cursor_got, cursor_want);
+        fs::remove_dir_all(setup_dir_name).expect("couldn't remove directory");
+    }
+    #[test]
+    fn show_tips_where_not_works() {
+        let setup_dir_name = "temp_show_tips_where_2";
+        let project_dir_name = "imgv";
+        setup_for_new_tip(setup_dir_name, project_dir_name);
+        setup_create_new_tips(
+            setup_dir_name,
+            project_dir_name,
+            "create",
+            "@tip",
+            vec!["10".to_string(), "Add file explorer".to_string()],
+        )
+        .expect("SETUP: CREATING TIP FAILED!");
+        setup_create_new_tips(
+            setup_dir_name,
+            project_dir_name,
+            "create",
+            "@tip",
+            vec!["4".to_string(), "improve API".to_string()],
+        )
+        .expect("SETUP: CREATING TIP FAILED!");
+
+        let cmd = Command::new(
+            "show",
+            "@where",
+            vec!["critical".to_string(), "is".to_string(), "4".to_string()],
+        )
+        .expect("Error: creating new command");
+        let tip_cli = TipCli {
+            tip_dir: setup_dir_name.to_string(),
+            project_name: project_dir_name.to_string(),
+            command: cmd,
+        };
+        let cursor_got = tip_cli.perform();
+        let cursor_want = Cursor {
+            list: Some(vec![TipFile {
+                id: TipColTypes::Id(1),
+                title: TipColTypes::Title(String::from("Add file explorer")),
+                critical: TipColTypes::Critical(10),
+                done: TipColTypes::Done(true),
             }]),
             ok: Ok(()),
         };

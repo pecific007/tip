@@ -37,15 +37,15 @@ Created: new Tip: Add file explorer
 
 $ tip imgv show @all
 @id:001 | @title:Add file explorer | @critical:4 | @done:false
-```
-Not yet implemented: it's the general idea of how these functions will work:
-```console
 
 $ tip imgv show @where done
 Tip: No data found.
 $ tip imgv update @set id is 001 @done:true
 Tip: Marked @id: 001 @title: Add file explorer @critical 4 as done.
 
+```
+Not yet implemented: it's the general idea of how these functions will work:
+```console
 $ tip imgv update @set title like 'file explorer' @critical:8
 @id: 001 @title: Add **file explorer** @critical 8 @done: true
 
@@ -78,15 +78,15 @@ Adding a new `tip` will create a file in the project file (`tip_dir/imgv`) with 
   - [x] create
   - [ ] delete
   - [ ] update
-  - [ ] show
+  - [x] show
 - [ ] implement functions
   - [x] all
   - [x] project
   - [x] tip
-  - [ ] where
+  - [x] where
   - [ ] set
 - [x] separate into crates and modules
-- [ ] decide on a good structure for providing command lines arguments
+- [x] decide on a good structure for providing command lines arguments
 
 ### Examples:
 1) This will create a new project called imgv
@@ -99,7 +99,12 @@ Adding a new `tip` will create a file in the project file (`tip_dir/imgv`) with 
     $ tip imgv create @tip 10 'fix bug in main.c at line 30'
     ```
 
-3) This will show all the tips with `@done:false`
+3) This will show all the tips within `$HOME/.tip/imgv/` directory where `@done:false`
     ```console
     $ tip imgv show @all
+    ```
+
+4) This will show all the tips where the condition is true
+    ```console
+    $ tip imgv show @where title is 'Hello world' and critical lt 4
     ```
