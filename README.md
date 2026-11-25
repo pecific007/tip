@@ -40,12 +40,13 @@ $ tip imgv show @all
 
 $ tip imgv show @where done
 Tip: No data found.
-$ tip imgv update @set id is 001 @done:true
-Tip: Marked @id: 001 @title: Add file explorer @critical 4 as done.
-
 ```
 Not yet implemented: it's the general idea of how these functions will work:
 ```console
+
+$ tip imgv update @set id is 001 @done:true
+Tip: Marked @id: 001 @title: Add file explorer @critical 4 as done.
+
 $ tip imgv update @set title like 'file explorer' @critical:8
 @id: 001 @title: Add **file explorer** @critical 8 @done: true
 
