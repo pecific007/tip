@@ -38,7 +38,10 @@ Created: new Tip: Add file explorer
 $ tip imgv show @all
 @id:001 | @title:Add file explorer | @critical:4 | @done:false
 
-$ tip imgv show @where done
+$ tip imgv show @where done is true
+Tip: No data found.
+
+$ tip imgv show @where title is 'Add file explorer' and id is 1
 Tip: No data found.
 ```
 Not yet implemented: it's the general idea of how these functions will work:
