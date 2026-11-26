@@ -112,3 +112,27 @@ Adding a new `tip` will create a file in the project file (`tip_dir/imgv`) with 
     ```console
     $ tip imgv show @where title is 'Hello world' and critical lt 4
     ```
+
+## Installation:
+
+These are the steps to install this project on your Linux Distro.
+### Requirements:
+Make sure you have already installed:
+1. [Git](https://git-scm.com)
+2. [Rust programming language](https://rust-lang.org)
+3. Cargo - Rust package manager
+
+These steps are for installation on bash/zsh.
+- Clone the [repository](https://github.com/pecific007/tip.git)
+- Build the project and make sure it works as expected using cargo:
+    ```bash
+    ~/Github/tip/$ cargo build
+    ```
+- When done run the following command to install:
+    ```bash
+    ~/Github/tip/$ cargo install --path . --locked
+    ```
+- Once it installs, make sure your `$PATH` variable has `~/.cargo/bin`. If not, add this to your `.bashrc` or `.zshrc`:
+    ```bash
+    export PATH="~/.cargo/bin:$PATH"
+    ```
